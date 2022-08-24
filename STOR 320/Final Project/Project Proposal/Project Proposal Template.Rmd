@@ -1,0 +1,36 @@
+---
+title: "Project Proposal"
+author: "STOR 320.01 Group 9"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+# Project Roles
+
+- **Creator:** Brian Cooper
+- **Interpreter:** Zeyan Huang
+- **Orator 1:** Leonardo De Oliveira
+- **Orator 2:** Thea Yang
+- **Deliverer:** Shihang Liu
+
+# Dataset
+
+[Patient Survival Prediction](https://www.kaggle.com/mitishaagarwal/patient)
+
+# Initial Questions
+
+- **Question 1:** Do certain diagnoses link with a specific heart rate range?
+- **Question 2:** How good is the Glasgow Coma Scale during the first 24 hours as a prediction for survival rate?
+- **Question 3:** Are there significant differences in survival rates (and potentially other health assessments) between the different locations prior to admittance to the ICU (accident/emergency, transfer, etc.)?
+- **Question 4:** Does race have any relationship with survival rate?
+- **Question 5:** Is there a positive relationship between bmi and survival rate? If there is, how strong is the correlation?
+- **Question 6:** Is weight correlated the length of stay of the patient between hospital admission and unit admission?
+- **Question 7:** Is there any relationship between gender and survival rate? 
+- **Question 8:** Is the patient’s respiratory rate (during the first 24 hours) correlated with the temperature measured (during the first 24 hours) ?
+- **Question 9:** Is age has a positive correlation with survival rate? If yes, is there a negative correlation between the patients' lowest heart rate during the first 24 hours of their unit stay and their survival rate for patients who are at the same age?
+- **Question 10:** Which disease has the lowest survival rate? Are different diseases have different survival rates in different age periods?

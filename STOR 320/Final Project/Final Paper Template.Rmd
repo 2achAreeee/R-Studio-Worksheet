@@ -1,0 +1,377 @@
+---
+title: "Final Paper"
+author: "STOR 320.01 Group 09"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+#Put Necessary Libraries Here
+library(tidyverse)
+library(caTools)
+library(caret)
+library(devtools)
+library(DT)
+library(shiny)
+library(dplyr)
+library(purrr)
+library(modelr)
+library(broom)
+
+Survival_Rates = read_csv("dataset.csv")
+```
+
+# INTRODUCTION
+
+Since 2019, Covid-19 has been an ongoing topic for the world. Up until now, there is still discussion regarding how CoronaVirus, with its many side-effects, potentially influences the death rate for patients with chronic diseases. This is especially true for patients at high risk, like those in the ICU (Intensive Care Unit). It is a truly noteworthy question because patients in ICU can have serious medical problems or an incredibly weak immune system, making them more vulnerable to CoronaVirus and threatening their lives even further. The CoronaVirus has highlighted the importance of understanding the many variables that give certain patients a greater risk of death.
+
+
+To explore this urgent question, we have decided to investigate death rates in current ICUs and the health factors that lead to higher death rates. We will use statistical modeling techniques to try and better understand and predict death rate, the most important data in ICU. To do this, we propose the question: “What variables are the most significant when predicting death rate in ICU?” Given that the death rate is traceable to so many variables, we built a model to decide which are the most significant ones, in other words, the variables that contribute the most to a patient’s death. This model may benefit the owner, since the purpose of publishing this dataset is to “develop and validate a prediction model for all-cause in-hospital mortality among admitted patients.” The model we made is helpful as it predicts the ICU mortality rate among admitted patients.
+
+
+What we’ve found in the first question helps set up the second one which is, “Which variables are significant to a certain disease type?” We found that the most contributing variables to determining survival rate are the diagnosis of eight diseases: -leukemia -lymphoma -diabetes -aids -solid tumor with metastasis -cirrhosis -hepatic -immunosuppression. We decided to explore variations within these eight diseases to see which variables are significant to some diseases but not to others. This question matters to the owner because it helps better understand the leading variation of death in ICU.
+ 
+
+# DATA
+
+We found the dataset, “Patient Survival Prediction”, on Kaggle. It originated from MIT’s GOSSIS (Global Open Source Severity of Illness Score) initiative and it was collected in the US in 2021. In this dataset, there are various factors given, when a patient is hospitalized. These factors can help predict whether the patient will survive or not. The original dataset has 85 columns, or 85 assessments of each observation, in this dataset, there are 91713 observations, each of them represents an ICU patient in the hospital. You can see some of the data visualized using this [web app](https://brian-cooper.shinyapps.io/Hospital_Death_rates/).
+
+
+To answer our first question, we dropped all the data that doesn’t affect death rate(encounter_id, patient_id, hospital_id, elective_surgery, icu_id, icu_stay_type). On top of that, we eliminated the following variables: “gcs_unable_apache, apache_post_operative, apache_4a_hospital_death_prob, apache_4a_icu_death_prob, apache_2_bodysystem,” since they are doing mostly the same job as our model does, which may influence the accuracy of our results. Therefore, the total number of variables used for the first question is 74. Given that it is a huge dataset, we break the variables into three categories:
+1. Personal information including weights, heights, age, ethnicity, gender,                         pre_icu_los_days (The length of stay of the patient between hospital admission and               unit admission)
+2. Vital signs including,arf_apache，gcs_eyes_apache, gcs_motor_apache,                             gcs_verbal_apache, heart_rate_apache, intubated_apache, map_apache, resprate_apache,             temp_apache,ventilated_apache, d1_diasbp_(noninvasive_)max/min, d1_heartrate_max/min,            d1_mbp_(noninvasive_)max/min, d1_resprate_max/min, d1_spo2_max/min,                              d1_sysbp_(noninvasive_)max/min, d1_temp_max/min ,h1_diasbp_(noninvasive_)max/min,                h1_mbp_(noninvasive_)max/min, h1_resprate_max/min, h1_spo2_max/min,                              h1_sysbp_(noninvasive_)max/min, d1_glucose_max/min, d1_potassium_max/min. TThe table  below      interprets what each variable means.
+ 
+
+```{r, echo = FALSE, results='hide', warning=FALSE, include= FALSE}
+C_definition = read_csv("dataset2.csv")
+C_definition02 = C_definition[1,19:71]
+C_definition_F <- as.data.frame(t(C_definition02))
+C_definition_F = rename(C_definition_F, "Explaination" = V1)
+```
+
+```{r, echo = FALSE}
+datatable((C_definition_F))
+```
+
+3. Medical history including past diagnosis of aids (Whether the patient has a definitive           diagnosis of acquired immune deficiency syndrome (AIDS)), cirrhosis (Whether the                 patient has a history of heavy alcohol use with portal hypertension and varices, other           causes of cirrhosis), diabetes_mellitus (Whether the patient has been diagnosed with             diabetes, either juvenile or adult onset, which requires medication.), hepatic_failure           (Whether the patient has cirrhosis and additional complications including jaundice and           ascites, upper GI bleeding, hepatic), immunosuppression(Whether the patient has their immune     system suppressed within six months prior to ICU admission), leukemia (Whether the patient has    been diagnosed with acute or chronic myelogenous leukemia, acute or chronic), lymphoma(Whether    the patient has been diagnosed with non-Hodgkin lymphoma), solid_tumor_with_metastasis(Whether    the patient has been diagnosed with any solid tumor carcinoma (including malignant melanoma)).    To answer the second question, we used the same variables, but shifted the focus from their      importance in relation to death rate to the eight diseases we identified to be the leading       variables. The figure below shows the number of deaths and survival for each disease.
+
+
+```{r,echo=FALSE}
+MEDICAL_IN_Q2 = Survival_Rates %>%
+                select(age,bmi,patient_id, aids, cirrhosis, diabetes_mellitus, hepatic_failure, immunosuppression, leukemia, lymphoma, solid_tumor_with_metastasis, hospital_death) %>%
+                gather(disease, condition, aids:solid_tumor_with_metastasis) %>%
+                filter(condition == 1) %>%
+                group_by(disease) %>%
+                summarize(
+                          total = n(),
+                          death = sum(hospital_death),
+                          survive = total - death,
+                          death_rate = (death/total)*100
+                      ) %>%
+                ungroup() %>%
+                gather(status, count, death:survive) %>%
+                select(-total)
+ggplot(data = MEDICAL_IN_Q2,aes(x = disease, y = count)) +
+  geom_bar(stat = "identity", aes(fill = status)) +
+  geom_point(aes(x = disease, y = count),stat = "identity", color = "blue", size = 1)+
+  theme(axis.text.x = element_text(angle = 30, hjust = 1)) +
+  ggtitle("Survival Rates by Diseases")
+```
+
+# RESULTS
+
+# First Question
+
+In order to figure out which regressors are the most significant in predicting the death probability of patients in ICU, we first choose the logit regression model as our predicting model since the data about the hospital_death is binary. Before putting every variable into the model, we first dropped some columns which are considered non-useful data for predicting. We choose all columns but identification, death probability predicted by Apache 4, and an all empty column. By using the logit model, we get our initial model. We confirm the significance level of regressors by comparing the size of the p-value; if the factor has a p-value that is closer to zero, we consider the factor to have a more significant impact on the prediction result. The summary of the model tells us that all these 24 factors have significant impact on our model,except the intercept.
+
+```{r, echo = FALSE, results="hide"}
+Model_dataset = Survival_Rates %>%
+                select(-c(encounter_id, patient_id, hospital_id, icu_id, apache_4a_hospital_death_prob, apache_4a_icu_death_prob, ...84)) %>%
+                na.omit()
+
+set.seed(320)
+
+index <- createDataPartition(Model_dataset$hospital_death, p = 0.8, list = FALSE)
+```
+
+```{r, echo = FALSE, results="hide"}
+train01 <- Model_dataset[index,]
+test01 <- Model_dataset[-index,]
+
+model01 <- glm(hospital_death~., data = train01, family = binomial)
+summary(model01)
+```
+
+```{r, echo = FALSE}
+pv <- round(coef(summary(model01))[,1:4], 5)
+table1 <- as.data.frame(pv)
+table2 <- filter(table1, table1[,4] <= 0.001)
+datatable(table2)
+
+```
+
+We then focused on improving our model. As we know, a better model should have a smaller AIC (Akaike Information Criteria). The AIC is equivalent to R2 in logistic regression, and smaller AIC values indicate the model is closer to the truth. So we decide to remove some non-significant factors one by one and expect a lower AIC value but a not increasing Residual deviance. Since there are too many factors for this model, we chose four non-significant factors that we are interested in developing and determined whether or not we should keep them in the model. The four factors include BMI, AIDS, Lymphoma, and gender. In regards to BMI, since this is a factor involved in the measurement of a patient’s health, we expected that it would be a significant, impactful factor in the model, but this proved not to be true. Furthermore, although most other chronic diseases are significant factors, AIDS is not, which also surprised us, considering that AIDS is notoriously well-known to be a devastating and dangerous disease. The same can be said for Lymphoma, which also proved to be less significant than we originally predicted, since this illness similarly boasts a dreadful reputation. Moreover, in terms of gender, throughout our EDA process, we discovered that there is a significant and noteworthy difference in the death rate between males and females. This led us to posit the question of if gender is a valuable factor to the model. What’s more, does gender have an impact on death probability?
+
+
+After we built four new models, we recorded different residual deviance and AIC values for each model. We created a plot by inputting the latter values into a data frame with the original value in order to compare them by plots. The plot is shown below:
+
+
+```{r, echo = FALSE, results="hide"}
+train02 <- Model_dataset[index,]
+test02 <- Model_dataset[-index,]
+
+model02 <- glm(hospital_death~.- bmi, data = train02, family = binomial)
+summary(model02)
+```
+
+
+```{r, echo = FALSE, results="hide"}
+train03 <- Model_dataset[index,]
+test03 <- Model_dataset[-index,]
+
+model03 <- glm(hospital_death~.- aids, data = train03, family = binomial)
+summary(model03)
+```
+
+```{r, echo = FALSE, results="hide"}
+train04 <- Model_dataset[index,]
+test04 <- Model_dataset[-index,]
+
+model04 <- glm(hospital_death~.- lymphoma, data = train04, family = binomial)
+summary(model04)
+```
+
+```{r, echo = FALSE, results="hide"}
+train05 <- Model_dataset[index,]
+test05 <- Model_dataset[-index,]
+
+model05 <- glm(hospital_death~.- gender, data = train05, family = binomial)
+summary(model05)
+```
+
+```{r, echo = FALSE, results="hide", warning=FALSE}
+Chosen_Factor <- c("ALL", "-BMI", "-Aids", "-Lymphoma", "-Gender")
+Residual_deviance <- c(20629, 20631, 20629, 20630, 20632)
+AIC <- c(20833, 20833, 20831, 20832, 20834)
+change_aic = data.frame(Chosen_Factor, Residual_deviance, AIC)
+
+
+Q1_PLOT = ggplot(change_aic) +
+  geom_bar(aes(x = Chosen_Factor, y = AIC-20800), stat = "identity", fill = "grey") +
+  geom_point(aes(x = Chosen_Factor, y = Residual_deviance-20600), stat = "identity", color = "red", size = 3) +
+  geom_abline(intercept=29, slope=0, color="red")+
+  geom_abline(intercept=33, slope=0, color="blue") +
+  labs(title = "AIC Value of Different Model Without Specific Factor", x = "Chosen Factor", y = "AIC Value") +
+    scale_y_continuous(sec.axis = sec_axis(~., name = "Residual deviance"))
+```
+
+```{r, echo=FALSE}
+Q1_PLOT
+```
+
+(Since both AIC value and Residual deviance value are too large, we subtract 20800 by the AIC value and subtract 20600 by Residual deviance value so that we can view their difference more easily.)
+
+
+By reading the plot shown above, we found out that only the model without the factor “Aids” has a smaller AIC value than the original model and has the same residual deviance as the original model. Therefore, the factors “BMI,” “Gender,” and “Lymphoma” do have some impact on the prediction model, and “Aids” can be dropped from our model. When speculating a reason as to why “Aids” has no impact, we think that AIDS cannot effectively kill the human body but instead attacks the human immune system, causing the human immune system to collapse. Eventually, the patient cannot recover from other diseases and dies in the ICU. So, in the case of AIDS, it’s not a short-term cause of death therefore it has no impact on the prediction model.
+
+
+We use the model excluding “Aids” as our final model and calculate the accuracy of the prediction by the formula ‘Accuracy = (TP + TN)/(TN + FP + FN + TP).’ Our logistics model can classify 92.36% of all the observations correctly in the training dataset. The overall correct classification accuracy in the test dataset is 92.36% which is comparable to the train dataset. This shows that our model is performing well.
+
+
+
+```{r, echo = FALSE, results="hide", warning=FALSE}
+predict_prob03 <- predict(model03, test03, type = 'response')
+
+# Converting from probability to actual output
+train03$pred_class <- ifelse(model03$fitted.values >= 0.5, "1", "0")
+test03$pred_class <- ifelse(predict_prob03 >= 0.5, "1", "0")
+#Generating the classification table
+ctab_train03 <- table(train03$hospital_death, train03$pred_class)
+ctab_train03
+ctab_test03 <- table(test03$hospital_death, test03$pred_class)
+ctab_test03
+
+# Accuracy = (TP + TN)/(TN + FP + FN + TP)
+# Accuracy in training dataset
+accuracy_train03 <- sum(diag(ctab_train03))/sum(ctab_train03)*100
+accuracy_train03
+
+# Accuracy in training dataset
+accuracy_test03 <- sum(diag(ctab_test03))/sum(ctab_test03)*100
+accuracy_test03
+
+```
+
+```{r, echo = FALSE, results="hide", warning=FALSE}
+predict_prob03 <- predict(model03, test03, type = 'response')
+
+# Converting from probability to actual output
+train03$pred_class <- ifelse(model03$fitted.values >= 0.7, "1", "0")
+test03$pred_class <- ifelse(predict_prob03 >= 0.7, "1", "0")
+#Generating the classification table
+ctab_train03 <- table(train03$hospital_death, train03$pred_class)
+ctab_train03
+ctab_test03 <- table(test03$hospital_death, test03$pred_class)
+ctab_test03
+
+# Accuracy = (TP + TN)/(TN + FP + FN + TP)
+# Accuracy in training dataset
+accuracy_train03 <- sum(diag(ctab_train03))/sum(ctab_train03)*100
+accuracy_train03
+
+# Accuracy in training dataset
+accuracy_test03 <- sum(diag(ctab_test03))/sum(ctab_test03)*100
+accuracy_test03
+
+```
+
+# Second Question
+
+For the second question, we dig deeper into specific factors for more accurate information. As we mentioned in the DATA part, this dataset contains eight columns of regressors which are all chronic diseases categories. We want to determine what affects the death rate of those patients with specific chronic diseases. So we constructed eight logistic regression models for each disease and only included the patients who had the specific disease. As we concluded in the exploration of question 1, the model built for AIDS patients failed, and the result we got in the summary of the AIDS model was that all p values of all regressors are 1 or NA. This finding also reaffirms our conclusion about AIDS in Question 1.
+
+
+The remaining seven chronic diseases have successfully resumed logistic regression models. As we did in the first question, we define regressors with p-values less than 0.001 as regressors that significantly impact the model’s predictions, or “essential regressors” for short. We tabulate the essential variables in each chronic disease model, and if the model has no essential variables, we skip it and do not discuss it. This is significant to ensure that the conclusions we draw in this way are adequately supported. By reading all the essential variable tables, four models have essential regressors, and only the model of diabetes mellitus has more than 13 essential regressors. Thus, we pay most of our attention to the model of diabetes mellitus.
+
+
+```{r, , echo = FALSE, results="hide", warning=FALSE}
+aids_p = Model_dataset %>%
+        filter(aids == 1) %>%
+        select(-c(aids))
+
+aids_model = glm(formula = hospital_death ~., data = aids_p, family = binomial)
+summary(aids_model)
+
+```
+
+
+```{r, echo = FALSE, results="hide", warning=FALSE}
+cirrhosis_p = Model_dataset %>%
+        filter(cirrhosis == 1) %>%
+        select(-c(cirrhosis))
+
+death_cirrhosis = glm(formula = hospital_death ~., data = cirrhosis_p, family = binomial)
+summary(death_cirrhosis)
+```
+
+```{r, echo = FALSE, results="hide", warning=FALSE}
+diabetes_mellitus_p = Model_dataset %>%
+        filter(diabetes_mellitus == 1) %>%
+        select(-c(diabetes_mellitus))
+
+diabetes_mellitus_model = glm(formula = hospital_death ~., data = diabetes_mellitus_p, family = binomial)
+summary(diabetes_mellitus_model)
+```
+Below is an essential variable table for diabetes mellitus:
+```{r, echo=FALSE}
+pv_diabetes_mellitus <- round(coef(summary(diabetes_mellitus_model))[,1:4], 5)
+table_diabetes_mellitus<- as.data.frame(pv_diabetes_mellitus) %>%
+                          filter(pv_diabetes_mellitus[,4] <= 0.001)
+datatable(table_diabetes_mellitus)
+```
+
+In the ‘Essential variable table for diabetes mellitus’, we find that age is an essential regressor variable with a p-value of 0. We were very interested in the effect of age on patients when we were doing our EDA, and diabetes is a well-known geriatric disease, so we want to measure the relationship between age and explore the impact on people with diabetes in depth. We grouped all people with diabetes by age, calculated the number of deaths for each age group, and put this information in the figure below.
+
+
+```{r, echo=FALSE}
+diabetes_mellitus_p2 = diabetes_mellitus_p %>%
+                      group_by(age) %>%
+                      summarize(Count = n(),
+                                Death = sum(hospital_death),
+                                Death_rate = Death/Count) %>%
+                      ungroup()
+
+ggplot(diabetes_mellitus_p2) +
+  geom_bar(aes(x=age, y= Count), stat = "identity", fill = "blue") +
+  geom_bar(aes(x=age, y= Death), stat = "identity", fill = "red") +
+  geom_line(aes(x=age, y = Death_rate*1000), stat = "identity", color = "purple", size = 2) +
+  labs(title = "Number of people with diabetes by age group and mortality", x = "Age", y = "Count") +
+    scale_y_continuous(sec.axis = sec_axis(~.*0.001, name = "Death Rate"))
+```
+
+In the graph above, the red bar represents the number of deaths, the blue represents the total number of patients, and the purple line represents the death rate of people with diabetes of all ages. We can easily see that the number of diabetic patients increases with age from the blue histogram, and the impact of diabetes on mortality also increases with age. Because the number of patients under 30 years old is too small to form strong evidence, we observe the middle and rear parts of the graph, and the purple line graph increases steadily in fluctuation after more than 30 years of age. Therefore, we can conclude that increasing age has a clear and stable effect on mortality in diabetic patients.
+
+
+```{r, echo=FALSE, results='hide', warning=FALSE}
+hepatic_failure_p = Model_dataset %>%
+        filter(hepatic_failure == 1) %>%
+        select(-c(hepatic_failure))
+
+hepatic_failure_model = glm(formula = hospital_death ~., data = hepatic_failure_p, family = binomial)
+summary(hepatic_failure_model)
+```
+
+```{r, echo=FALSE, results='hide', warning=FALSE}
+immunosuppression_p = Model_dataset %>%
+        filter(immunosuppression == 1) %>%
+        select(-c(immunosuppression))
+
+immunosuppression_model = glm(formula = hospital_death ~., data = immunosuppression_p, family = binomial)
+summary(immunosuppression_model)
+```
+
+```{r, echo=FALSE, results='hide', results='hide'}
+pv_immunosuppression <- round(coef(summary(immunosuppression_model))[,1:4], 5)
+table_immunosuppression<- as.data.frame(pv_immunosuppression) %>%
+                          filter(pv_immunosuppression[,4] <= 0.001)
+datatable(table_immunosuppression)
+```
+```{r, echo = FALSE, results="hide", warning=FALSE}
+leukemia_p = Model_dataset %>%
+        filter(leukemia == 1) %>%
+        select(-c(leukemia))
+
+leukemia_model = glm(formula = hospital_death ~., data = leukemia_p, family = binomial)
+summary(leukemia_model)
+```
+
+```{r, echo = FALSE, results='hide', warning=FALSE}
+pv_leukemia <- round(coef(summary(leukemia_model))[,1:4], 5)
+table_leukemia<- as.data.frame(pv_leukemia) %>%
+                          filter(pv_leukemia[,4] <= 0.001)
+datatable(table_leukemia)
+```
+
+```{r, echo = FALSE, results="hide", warning=FALSE}
+lymphoma_p = Model_dataset %>%
+        filter(lymphoma == 1) %>%
+        select(-c(lymphoma))
+
+lymphoma_model = glm(formula = hospital_death ~., data = lymphoma_p, family = binomial)
+summary(lymphoma_model)
+```
+
+```{r, echo = FALSE, results="hide", warning=FALSE}
+solid_tumor_with_metastasis_p = Model_dataset %>%
+        filter(solid_tumor_with_metastasis == 1) %>%
+        select(-c(solid_tumor_with_metastasis))
+
+solid_tumor_with_metastasis_model = glm(formula = hospital_death ~., data = solid_tumor_with_metastasis_p, family = binomial)
+summary(solid_tumor_with_metastasis_model)
+```
+
+```{r, echo = FALSE, results='hide', warning=FALSE}
+pv_solid_tumor_with_metastasis <- round(coef(summary(solid_tumor_with_metastasis_model))[,1:4], 5)
+table_solid_tumor_with_metastasis<- as.data.frame(pv_solid_tumor_with_metastasis) %>%
+                          filter(pv_solid_tumor_with_metastasis[,4] <= 0.001)
+datatable(table_solid_tumor_with_metastasis)
+```
+
+
+# CONCLUSION
+
+Through modeling of Survival_Rates data, our group (09) sought to analyze the significance of regressors, and the meaning behind some significant regressors. Our goal in Question 1 is to find all the significant variables in the initial model and manually optimize the variable selection of the model in an attempt to increase the accuracy of the model by reducing the invalid variables. We found in question 1 that although we can judge the influence of the regressor on the model by comparing the size of the p-value, we cannot assume that the regressor is useless to the model because the p-value is too large. We came to this conclusion by reducing insignificant regressors without getting a more accurate model. Therefore, the only judgment we can make by reading the p-values is which regressors are the most important. In Question 2, we try to speculate on what aspects of mortality of these chronic diseases are mainly affected by an in-depth analysis of significant regressors and their impact on mortality. However, our plan failed in the second problem because the amount of data was too small, and only the model of diabetes was successfully obtained. By comparing the number and mortality of people with diabetes at different ages, we came to the following conclusions: both the incidence of diabetes and the probability of death is affected by age, and both possibilities increase with age. Although we failed to model chronic disease due to insufficient data, our analysis of significant regressors proved our approach correct and helped us understand the causes of disease mortality.
+
+Our work should be seen as an attempt at modeling and data analysis. In the medical field, a good model can help us predict a patient’s chance of survival and help us find how a specific disease can affect humans by preventing or reducing the risk of illness in the future. As we concluded in Question 2, the incidence of diabetes will increase with age, so the government and hospitals should appropriately remind middle-aged and older adults to pay attention to dietary health and daily sugar intake to reduce the risk of disease. At the same time, the government should also pay more attention to diabetes because developed countries are inevitably approaching an aging society, and diabetes is the most harmful to the elderly.
+
+We believe that there are two directions to continue this work, the first is to increase the size of the dataset, and the second is to select the regressors through machine learning; the goal is to create a near-perfect algorithmic model because as we all know, there is no such thing as a perfect model.
+
+A bigger dataset would allow us to model a specific disease and produce a more confident model. Many uncommon diseases, such as various cancer data models, require more data to come to a meaningful conclusion. On the other hand, when a model contains a large number of regressors, there must be regressors that negatively affect the accuracy of the model. Because it is too time-consuming and laborious for us to manually select the regressors, our wisest choice is to hand the process to machine learning, and we can algorithmically try to find the model with the smallest AIC and the residual deviance value that does not increase. This is one approach we consider to be a near-perfect model, but many other algorithms can build more accurate models, each with different filtering mechanisms depending on the primary purpose. Just as we chose ‘0.5’ as the dividing line between death and survival in question 1, if we want a model that can accurately predict death, choosing 0.7 and 0.8 as the dividing line will be better choices. In conclusion, the government should invest and help companies/institutions that research medical models because the health of human populations often has a massive impact on the stability of the entire society, for example, the covid-19 pandemic.
+
+
+
+
+
+
+

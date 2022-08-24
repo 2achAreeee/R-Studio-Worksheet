@@ -1,0 +1,224 @@
+---
+title: "Homework 3"
+author: "Zeyan Huang"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Instructions
+
+**Exercises:**  1,3 (Pgs. 90-91); 1 (Pg. 93); 2,4 (Pg. 99); 1,2 (Pg. 101); 2,3,5 (Pg. 104)
+
+**Submission:** Submit via an electronic document on Sakai. Must be submitted as a HTML file generated in RStudio. All assigned problems are chosen according to the textbook *R for Data Science*. You do not need R code to answer every question. If you answer without using R code, delete the code chunk. If the question requires R code, make sure you display R code. If the question requires a figure, make sure you display a figure. A lot of the questions can be answered in written response, but require R code and/or figures for understanding and explaining.
+
+```{r, include=FALSE}
+library(tidyverse)
+```
+
+# Chapter 5 (Pgs. 90-91)
+
+##  Exercise 1
+```{r}
+#
+summary(select(diamonds, x, y, z))
+```
+
+
+```{r}
+ggplot(diamonds) +
+  geom_histogram(mapping = aes(x = x), binwidth = 0.01)
+```
+
+```{r}
+ggplot(diamonds) +
+  geom_histogram(mapping = aes(x = y), binwidth = 0.01)
+```
+
+
+```{r}
+ggplot(diamonds) +
+  geom_histogram(mapping = aes(x = z), binwidth = 0.01)
+```
+
+There are also some outliers in the values of y and z. I want to check them in table.
+```{r}
+diamonds %>%
+  arrange(desc(y)) %>%
+  head(5)
+```
+There a two diamonds with extremly larger value of y. I want to check the y value without the outliers.
+```{r}
+filter(diamonds, z > 0, y < 11) %>%
+  ggplot() +
+  geom_histogram(mapping = aes(x = y), binwidth = 0.01)
+```
+
+```{r}
+diamonds %>%
+  arrange(desc(z)) %>%
+  head(5)
+```
+
+There is a one diamond with extremely large value of z. I want to check the z value without the outlier.
+
+```{r}
+filter(diamonds, z > 0, z < 10) %>%
+  ggplot() +
+  geom_histogram(mapping = aes(x = z), binwidth = 0.01)
+```
+
+According to the documentation for diamonds, x is length, y is width, and z is depth. If documentation were unavailable, I would compare the values of the variables to match them to the length, width, and depth. I would expect length and width would be two independent values that they are not defined by size relationship. But I would expect that the depth would always be the smallest value.
+```{r}
+summarise(diamonds, mean(x > y), mean(x > z), mean(y > z))
+```
+The data shown above prove what I expect.
+
+##  Exercise 3
+```{r}
+#
+diamonds %>%
+  filter(carat >= 0.99, carat <= 1) %>%
+  count(carat)
+```
+There are 23 diamonds are 0.99 carat and 1558 diamonds are 1 carat.
+There is a huge gap between the amount of 0.99 carat diamonds with 1 carat diamond. I believe there are some way or another some diamonds carat values are being “rounded up” because the price are totally different when a diamond get to 1 carat weight.
+# Chapter 5 (Pg. 93)
+
+##  Exercise 1
+```{r}
+#
+diamonds2 <- diamonds %>%
+  mutate(y = ifelse(y < 3 | y > 20, NA, y))
+
+ggplot(diamonds2, aes(x = y)) +
+  geom_histogram()
+```
+
+Missing values are removed when the number of observations in each bin are calculated. See the warning message: Removed 9 rows containing non-finite values (stat_bin)
+```{r}
+diamonds %>%
+  mutate(cut = ifelse(runif(n()) < 0.1, NA_character_, as.character(cut))) %>%
+  ggplot() +
+  geom_bar(mapping = aes(x = cut))
+```
+
+In the geom_bar() function, NA is treated as another category. The x aesthetic in geom_bar() requires a discrete (categorical) variable, and missing values act like another category.
+
+The difference between geom_histogram() and geom_bar() is that in a histogram, the x aesthetic variable needs to be numeric, and stat_bin() groups the observations by ranges into bins. Since the numeric value of the NA observations is unknown, they cannot be placed in a particular bin, and are dropped.
+
+# Chapter 5 (Pg. 99)
+
+##  Exercise 2
+```{r}
+#
+ggplot(data = diamonds, mapping = aes(x = carat, y = price)) +
+  geom_boxplot(mapping = aes(group = cut_width(carat, 0.1)), orientation = "x")
+```
+
+There is a positive relationship between carat and price.
+```{r}
+diamonds %>%
+  mutate(color = fct_rev(color)) %>%
+  ggplot(aes(x = color, y = price)) +
+  geom_boxplot()
+```
+
+There is a weak negative relationship between color and price. Since there are so many outliers, this conclusion is not convincible.
+```{r}
+ggplot(data = diamonds) +
+  geom_boxplot(mapping = aes(x = clarity, y = price))
+```
+
+There is also a weak negative relationship between clarity and price. Since there are so many outliers, this conclusion is not convincible.
+
+For both clarity and color, there is a much larger amount of variation within each category than between categories. Thus, Carat is clearly the single best predictor of diamond prices.
+```{r}
+ggplot(diamonds, aes(x = carat, y = price, color = cut)) +
+  geom_point()
+```
+
+From the plot we can find that the diamonds has lowest cut but with largest carat can have the similar or same price as those diamonds has better cut but lower carat. We can assume that a larger diamond can be profitably sold with a lower quality cut, while a smaller diamond requires a better cut.
+
+##  Exercise 4
+```{r}
+#
+library(lvplot)
+ggplot(diamonds, aes(x = cut, y = price)) +
+  geom_lv()
+```
+
+Letter-value plots is similar to box-plots, they both correspond to quantiles. However, letter-value plots incorporate far more quantiles than box-plots. They are useful for larger datasets because larger datasets can give precise estimates of quantiles beyond the quartiles, and as expectation, larger datasets should have more outliers.
+
+# Chapter 5 (Pg. 101)
+
+##  Exercise 1
+```{r}
+#
+diamonds %>%
+  count(color, cut) %>%
+  group_by(color) %>%
+  mutate(prop = n / sum(n)) %>%
+  ggplot(mapping = aes(x = color, y = cut)) +
+  geom_tile(mapping = aes(fill = prop))
+```
+
+To clearly show the distribution of cut within color, I calculate a new variable prop which is the proportion of each cut within a color. The proportion can help us show the distribution much more than using just count.
+##  Exercise 2
+```{r}
+#
+library(nycflights13)
+flights %>%
+  group_by(month, dest) %>%
+  summarise(dep_delay = mean(dep_delay, na.rm = TRUE)) %>%
+  ggplot(aes(x = factor(month), y = dest, fill = dep_delay)) +
+  geom_tile() +
+  labs(x = "Month", y = "Destination", fill = "Departure Delay")
+```
+
+Too much categorical value in destination and missing value make the data hard to read. And all outputs are unordered.
+To make the plot easier to read, we need to sort destinations by a meaningful quantity (distance, number of flights, average delay) and remove missing values(the reason of having these missing value is some small airports can not have fixed time flights to New York)
+```{r}
+flights %>%
+  group_by(month, dest) %>%                                 
+  summarise(dep_delay = mean(dep_delay, na.rm = TRUE)) %>%
+  group_by(dest) %>% 
+  filter(n() >= 12) %>% 
+  ungroup() %>%
+  mutate(dest = reorder(dest, dep_delay)) %>%
+  ggplot(aes(x = factor(month), y = dest, fill = dep_delay)) +
+  geom_tile() +
+  labs(x = "Month", y = "Destination", fill = "Departure Delay")
+```
+
+# Chapter 5 (Pg. 104)
+
+##  Exercise 2
+```{r}
+#
+ggplot(diamonds, aes(x = cut_number(price, 10), y = carat)) +
+  geom_boxplot() +
+  xlab("Price")
+```
+
+##  Exercise 3
+```{r}
+#
+ggplot(diamonds, aes(x =carat, y =  cut_number(price, 10))) +
+  geom_boxplot()
+```
+
+Prices for heavier diamonds vary less, with prices over 3 carats mostly concentrated in the $9,820 to $18,800 range. This is in line with my conjecture, since large diamonds can be split into smaller diamonds with better cuts, so the weight of large diamonds will be more affected by weight than anything else.
+
+##  Exercise 5
+```{r}
+#
+ggplot(data = diamonds) +
+  geom_point(mapping = aes(x = x, y = y)) +
+  coord_cartesian(xlim = c(4, 11), ylim = c(4, 11))
+```
+
+In this case, the two dimension plot shows that there is a strong relationship between  x and y. The outliers in this case are not extreme in either x or y. A binned plot would not reveal these outliers because it cannot show us the relationship between x and y and it may lead us to conclude that the largest value of x and was an outlier even though it appears to fit in the relationship.
