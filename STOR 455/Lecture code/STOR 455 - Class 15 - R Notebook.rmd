@@ -1,0 +1,84 @@
+---
+title: "STOR 455 Class 15 R Notebook"
+output: 
+  pdf_document
+---
+
+
+```{r message=FALSE, warning=FALSE}
+library(readr)
+
+Exams4 <- read_csv("https://raw.githubusercontent.com/JA-McLean/STOR455/master/data/Exams4.csv")
+
+Glue <- read_csv("https://raw.githubusercontent.com/JA-McLean/STOR455/master/data/Glue.csv")
+```
+
+```{r}
+amodA = aov(Grade~factor(Exam), data=Exams4)
+summary(amodA)
+
+amodB = aov(Grade~Student, data=Exams4)
+summary(amodB)
+
+amodC = aov(Grade~factor(Exam)+Student, data=Exams4)
+summary(amodC)
+```
+
+```{r}
+TukeyHSD(amodC)
+```
+
+```{r}
+par(mar=c(4,7,3,1))
+hsd=TukeyHSD(amodC)
+plot(hsd,las=2)
+```
+
+```{r}
+Glue_model = aov(Force ~ Thickness + Type + Thickness*Type, data=Glue)
+summary(Glue_model)
+```
+
+```{r}
+TukeyHSD(Glue_model)
+```
+
+```{r}
+interaction.plot(Glue$Type, Glue$Thickness, Glue$Force)
+```
+
+```{r}
+interaction.plot(Glue$Thickness, Glue$Type, Glue$Force)
+```
+
+
+```{r}
+mod1 = aov(Force ~ Thickness, data=Glue)
+summary(mod1)
+
+mod2 = lm(Force ~ Thickness, data=Glue)
+anova(mod2)
+summary(mod2)
+```
+
+
+```{r}
+mod3 = aov(Force ~ Thickness + Type, data=Glue)
+summary(mod3)
+
+mod4 = lm(Force ~ Thickness + Type, data=Glue)
+anova(mod4)
+summary(mod4)
+```
+
+
+```{r}
+mod5 = aov(Force ~ Thickness + Type + Thickness*Type, data=Glue)
+summary(mod5)
+
+mod6 = lm(Force ~ Thickness + Type + Thickness*Type, data=Glue)
+anova(mod6)
+summary(mod6)
+```
+
+

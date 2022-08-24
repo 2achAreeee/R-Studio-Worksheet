@@ -1,0 +1,122 @@
+---
+title: "STOR 455 Class 10 R Notebook"
+output: html_notebook 
+---
+
+```{r}
+library(readr)
+library(Stat2Data)
+
+Pulse <- read_csv("https://raw.githubusercontent.com/JA-McLean/STOR455/master/data/Pulse.csv")
+
+data("Perch")
+```
+
+
+```{r}
+set.seed(12345)
+rows <- sample(nrow(Pulse))
+Pulse_shuffled = Pulse[rows,]
+
+PulseTrain=Pulse_shuffled[1:300,]      
+PulseHoldout=Pulse_shuffled[301:375,]   
+```
+
+
+```{r}
+PulseTrainMod=lm(Active~Rest+Sex+Hgt+Wgt,data=PulseTrain)
+
+summary(PulseTrainMod)
+plot(PulseTrainMod)
+```
+
+
+```{r}
+#predict active heart rates for data in the holdout sample with the model made from the training data
+fitActive=predict(PulseTrainMod,newdata=PulseHoldout)
+
+#Actual active heart rates in holdout sample minus their predicted values
+holdoutresid=PulseHoldout$Active - fitActive
+
+#Center, spread, and shape for the distribution of holdouts
+mean(holdoutresid)
+sd(holdoutresid)
+
+qqnorm(holdoutresid)
+qqline(holdoutresid)
+```
+
+
+```{r}
+cor(PulseHoldout$Active,fitActive)
+```
+
+
+```{r}
+#Correlation between predicted and actual active heart rates
+crosscorr=cor(PulseHoldout$Active,fitActive)
+crosscorr^2
+
+#Change in r^2 from the training to the holdout
+shrinkage = summary(PulseTrainMod)$r.squared-crosscorr^2
+shrinkage
+```
+
+
+```{r}
+head(Perch)
+```
+
+```{r}
+# model to predict weight
+Perch_lm = lm(Weight~Length+Width+Width*Length, data=Perch)
+summary(Perch_lm)
+
+# Plots for residual analysis
+plot(Perch_lm)
+```
+
+
+```{r}
+# Double and triple the average leverage for 3 predictors
+2*(3+1)/56
+3*(3+1)/56
+
+Lev_indices = which(hatvalues(Perch_lm) >= 3*(3+1)/56)
+
+#Two cases with high leverage
+Perch[Lev_indices,]
+```
+
+```{r}
+#boxplots for the three variables in the model
+#points() is used to show the values for cases 1 and 40 that have high leverage
+#cex=3 is the type of symbol to show in the plot
+
+boxplot(Perch$Length, main="Length")
+points(Perch$Length[1], col="red", cex=3)
+points(Perch$Length[40], col="blue", cex=3)
+
+boxplot(Perch$Width, main="Width")
+points(Perch$Width[1], col="red", cex=3)
+points(Perch$Width[40], col="blue", cex=3)
+
+boxplot(Perch$Length*Perch$Width, main="Length*Width")
+points(Perch$Length[1]*Perch$Width[1], col="red", cex=3)
+points(Perch$Length[40]*Perch$Width[40], col="blue", cex=3)
+```
+
+```{r}
+# Shows 3 cases with high Cook's Distance
+Cooks_indices = which(cooks.distance(Perch_lm) >= 0.5)
+
+Perch[Cooks_indices,]
+
+# ',5' shows only the Cook's plot and not other residual diagnostics plots
+plot(Perch_lm,5)
+
+# 'v' draws a vertical line
+# lty chooses the type of line to draw (dashes)
+abline(v = 2*(3+1)/56, col="blue", lty=3)
+abline(v = 3*(3+1)/56, col="blue", lty=3)
+```

@@ -1,0 +1,73 @@
+---
+title: "STOR 455 Class 5 R Notebook"
+output:
+  pdf_document:
+    
+---
+
+```{r warning=FALSE, message=FALSE}
+library(readr)
+library(Stat2Data)
+
+lego <- read_csv("https://raw.githubusercontent.com/JA-McLean/STOR455/master/data/lego.csv")
+lego_under_800_pieces = subset(lego, Pieces < 800)
+```
+
+
+```{r}
+modlego2 = lm(Amazon_Price^(0.3)~Pieces, data=lego_under_800_pieces)
+
+plot(Amazon_Price^(0.3)~Pieces, data=lego_under_800_pieces)
+abline(modlego2, col="red")
+
+summary(modlego2)
+
+plot(modlego2, c(1, 2, 5))
+```
+
+
+```{r}
+cor(lego_under_800_pieces$Pieces, lego_under_800_pieces$Amazon_Price^(0.3))
+```
+
+
+```{r}
+cor(
+  lego_under_800_pieces$Pieces, 
+  lego_under_800_pieces$Amazon_Price^(0.3),
+  use="complete.obs"
+)
+```
+
+
+```{r}
+data(Houses)
+head(Houses)
+
+cor(Houses)
+```
+
+
+```{r}
+data(Cereal)
+head(Cereal)
+
+#cor(Cereal)
+
+cor(Cereal[c(2:4)])
+```
+
+
+```{r}
+cor.test(lego_under_800_pieces$Pieces, lego_under_800_pieces$Amazon_Price^(0.3))
+```
+
+
+```{r}
+anova(modlego2)
+```
+
+
+```{r}
+summary(modlego2)
+```

@@ -1,0 +1,232 @@
+---
+title: "STOR 455 Class 4 R Notebook"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r warning=FALSE, message=FALSE}
+library(readr)
+library(Stat2Data)
+library(metRology) # install first
+library(tidyr) # install first
+
+data("LongJumpOlympics2016")
+data("PalmBeach")
+
+lego <- read_csv("https://raw.githubusercontent.com/JA-McLean/STOR455/master/data/lego.csv")
+lego_under_800_pieces = subset(lego, Pieces < 800)
+
+source("https://raw.githubusercontent.com/JA-McLean/STOR455/master/scripts/CIPIPlot.R") 
+```
+
+```{r}
+GoldModel=lm(Gold~Year, data=LongJumpOlympics2016)
+
+plot(Gold~Year, data=LongJumpOlympics2016)
+abline(GoldModel)
+points(LongJumpOlympics2016$Year[16], LongJumpOlympics2016$Gold[16], col="red", pch=16)
+
+summary(GoldModel)
+```
+
+```{r}
+StanResidEst = GoldModel$resid/summary(GoldModel)$sigma
+
+StanResidEst - rstandard(GoldModel)
+```
+
+```{r}
+StanResid = GoldModel$resid/(summary(GoldModel)$sigma * sqrt(1 - hatvalues(GoldModel)))
+
+StanResid - rstandard(GoldModel)
+```
+
+```{r}
+2*(2/28)
+3*(2/28)
+
+hatvalues(GoldModel)
+```
+
+```{r}
+2*(2/28)
+3*(2/28)
+
+sort(hatvalues(GoldModel), decreasing = TRUE)
+```
+
+```{r}
+ElectionModel=lm(Buchanan~Bush,data=PalmBeach)
+plot(Buchanan~Bush,data=PalmBeach)
+abline(ElectionModel)
+points(PalmBeach$Bush[50], PalmBeach$Buchanan[50], col="red", pch=16)
+```
+
+```{r}
+2*(2/67)
+3*(2/67)
+head(sort(hatvalues(ElectionModel), decreasing=TRUE), n=10)
+
+# Defines new variable inside of the dataframe
+PalmBeach$Leverage = hatvalues(ElectionModel)
+
+PalmBeach[c(6,13,16,29,50,52),]
+```
+
+```{r}
+plot(Buchanan~Bush,data=PalmBeach)
+abline(ElectionModel, col="blue")
+
+NoPalmBeach=subset(PalmBeach,County!="PALM BEACH")
+ElectionModel_noPB=lm(Buchanan~Bush,data=NoPalmBeach)
+abline(ElectionModel_noPB, col="green")
+
+NoDade = subset(PalmBeach,County!="DADE")
+ElectionModel_noD=lm(Buchanan~Bush,data=NoDade)
+abline(ElectionModel_noD, col="red")
+```
+
+```{r}
+head(sort(cooks.distance(ElectionModel), decreasing=TRUE), n=5)
+
+plot(ElectionModel,5)
+abline(v = 4/67, col="blue", lty=3)
+abline(v = 6/67, col="blue", lty=3)
+```
+
+```{r}
+modlego = lm(Amazon_Price~Pieces, data=lego_under_800_pieces)
+
+plot(Amazon_Price~Pieces, data=lego_under_800_pieces)
+abline(modlego, col="red")
+
+summary(modlego)
+
+plot(modlego, c(1, 2, 5))
+
+head(sort(cooks.distance(modlego), decreasing = TRUE))
+```
+
+
+```{r}
+modlego2 = lm(Amazon_Price^(0.3)~Pieces, data=lego_under_800_pieces)
+
+plot(Amazon_Price^(0.3)~Pieces, data=lego_under_800_pieces)
+abline(modlego2, col="red")
+
+summary(modlego2)
+
+plot(modlego2, c(1, 2, 5))
+```
+
+
+```{r}
+plot(Amazon_Price~Pieces, data=lego_under_800_pieces)
+
+B0 = summary(modlego2)$coef[1,1]
+B1 = summary(modlego2)$coef[2,1]
+
+curve((B0 + B1*x)^(10/3), add=TRUE, col='red')
+```
+
+
+```{r}
+dataframe_to_write = lego_under_800_pieces %>% drop_na('Pieces', 'Amazon_Price')
+dataframe_to_write$Amazon_Price_transformed = dataframe_to_write$Amazon_Price^0.3
+
+write.csv(dataframe_to_write, 
+          file = "lego_under_800_pieces.csv", 
+          row.names=FALSE
+)
+```
+
+
+```{r}
+# Display the Student's t distributions with various
+# degrees of freedom and compare to the normal distribution
+
+x <- seq(-4, 4, length=100)
+hx <- dnorm(x)
+
+degf <- c(1, 5, 15, 30)
+colors <- c("red", "blue", "darkgreen", "gold", "black")
+labels <- c("df=1", "df=5", "df=15", "df=30", "normal")
+
+plot(x, hx, type="l", lty=2, xlab="x value",
+  ylab="Density", main="Comparison of t Distributions")
+
+for (i in 1:4){
+  lines(x, dt(x,degf[i]), lwd=2, col=colors[i])
+}
+
+legend("topright", inset=.05, title="Distributions",
+  labels, lwd=2, lty=c(1, 1, 1, 1, 2), col=colors)
+```
+
+
+```{r}
+qt(0.975, 716)
+
+curve(
+  dt.scaled(
+    x, 
+    716,
+    mean = summary(modlego2)$coef[2,1],
+    sd = summary(modlego2)$coef[2,2]
+    ), 
+  from = 0.00190, to = 0.00255,
+  )
+
+
+abline(
+  v=c(
+    qt.scaled(
+      0.025, 
+      716, 
+      mean = summary(modlego2)$coef[2,1], 
+      sd = summary(modlego2)$coef[2,2]
+      ),
+    qt.scaled(
+      0.975, 
+      716, 
+      mean = summary(modlego2)$coef[2,1], 
+      sd = summary(modlego2)$coef[2,2]
+      )
+    )
+  )
+```
+alpha = 0.05, 1- alpha/2 = 0.975
+
+80% CI
+100(1-alpha) = 80, which means alpha = 0.2 1 - alpha/2 = 0.9
+
+```{r}
+summary(modlego2)$coef[2,1]-qt(0.975, 716)*summary(modlego2)$coef[2,2]
+summary(modlego2)$coef[2,1]+qt(0.975, 716)*summary(modlego2)$coef[2,2]
+```
+
+
+```{r}
+confint(modlego2, level=0.95)
+```
+
+
+```{r}
+newx=data.frame(Pieces=127)
+head(newx)
+
+predict.lm(modlego2, newx, interval="confidence")
+predict.lm(modlego2, newx, interval="prediction")
+```
+
+
+```{r}
+predict.lm(modlego2, newx, interval="confidence")^(10/3)
+predict.lm(modlego2, newx, interval="prediction")^(10/3)
+```
+
+
+```{r}
+CIPIPlot(lego_under_800_pieces$Pieces, lego_under_800_pieces$Amazon_Price^(0.3))
+```

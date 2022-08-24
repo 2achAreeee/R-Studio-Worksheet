@@ -1,0 +1,162 @@
+---
+title: "STOR 455 - Class 8 - R Notebook"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r message=FALSE, warning=FALSE}
+library(readr)
+library(leaps)
+
+lego <- read_csv("https://raw.githubusercontent.com/JA-McLean/STOR455/master/data/lego.csv",
+                 show_col_types = FALSE)
+lego2 = subset(lego, Theme == 'Star Wars' | Theme == 'Friends')
+
+Turtles2 <- read_csv("https://raw.githubusercontent.com/JA-McLean/STOR455/master/data/Turtles2.csv",
+                     show_col_types = FALSE)
+Turtles3 = subset(Turtles2, LifeStage == "Adult")
+
+source("https://raw.githubusercontent.com/JA-McLean/STOR455/master/scripts/ShowSubsets.R")
+
+head(lego2)
+```
+
+```{r}
+t.test(Amazon_Price~Theme, var.equal=TRUE, data=lego2)
+```
+
+```{r}
+modlego=lm(Amazon_Price~Theme, data=lego2)
+summary(modlego)
+```
+
+```{r}
+modlego2=lm(Amazon_Price~Pieces + Theme, data=lego2)
+summary(modlego2)
+```
+
+```{r}
+plot(Amazon_Price~Pieces, col="blue", data=subset(lego2,Theme=='Star Wars'))
+
+points(Amazon_Price~Pieces, col="green", data=subset(lego2,Theme=='Friends'))
+
+B_Int = summary(modlego2)$coef[1,1]
+B_Pieces = summary(modlego2)$coef[2,1]
+B_Theme = summary(modlego2)$coef[3,1]
+
+lines(
+  B_Int + B_Pieces * Pieces ~ Pieces, 
+  col = "blue", 
+  data = lego2
+  )
+
+lines(
+  (B_Int + B_Theme) + B_Pieces * Pieces ~ Pieces, 
+  col = "green", 
+  data = lego2
+  )
+```
+
+```{r}
+StarWars=subset(lego2,Theme=='Star Wars')
+modelSW=lm(Amazon_Price~Pieces, data=StarWars)
+summary(modelSW)
+```
+
+```{r}
+Friends=subset(lego2,Theme=='Friends')
+modelF=lm(Amazon_Price~Pieces, data=Friends)
+summary(modelF)
+```
+
+```{r}
+plot(Amazon_Price ~ Pieces, col="blue", data=StarWars)
+
+points(Amazon_Price ~ Pieces, col="green", data=Friends)
+
+lines(
+  summary(modelSW)$coef[1,1] + summary(modelSW)$coef[2,1] * Pieces ~ Pieces, 
+  col = "blue", 
+  data = lego2
+  )
+
+lines(
+  summary(modelF)$coef[1,1] + summary(modelF)$coef[2,1] * Pieces ~ Pieces, 
+  col = "green", 
+  data = lego2
+  )
+```
+
+```{r}
+modlegoint=lm(Amazon_Price ~ Pieces + Theme + Pieces*Theme, data=lego2)
+summary(modlegoint)
+```
+
+```{r}
+modlego_Reduced = lm(Amazon_Price~Pieces, data=lego2)
+
+anova(modlego_Reduced, modlegoint)
+```
+
+```{r}
+anova(modlegoint)
+```
+
+
+```{r}
+head(Turtles3)
+```
+
+```{r}
+modelW = lm(Annuli ~ Weather, data=Turtles3)
+summary(modelW)
+```
+
+```{r}
+plot(Annuli ~ Weather, data=Turtles3)
+abline(modelW)
+```
+```{r}
+tapply(Turtles3$Annuli, Turtles3$Weather, mean)
+```
+
+
+```{r}
+Turtles3$NoPrecip=(Turtles3$Weather==1)*1
+Turtles3$Drizzle=(Turtles3$Weather==2)*1
+
+modelW2 = lm(Annuli ~ NoPrecip + Drizzle, data = Turtles3)
+summary(modelW2)
+```
+
+
+```{r}
+modelW3=lm(Annuli~factor(Weather),data=Turtles3)
+summary(modelW3)
+```
+
+
+```{r}
+modelW4=lm(Annuli~Mass+factor(Weather),data=Turtles3)
+summary(modelW4)
+
+plot(modelW4)
+```
+
+
+```{r}
+modelW5=lm(log(Annuli)~log(Mass)+factor(Weather),data=Turtles3)
+summary(modelW5)
+
+plot(modelW5)
+```
+
+
+
+```{r}
+modelW5int=lm(log(Annuli)~ log(Mass) + factor(Weather) + log(Mass)*factor(Weather),data=Turtles3)
+summary(modelW5int)
+anova(lm(log(Annuli)~log(Mass), data=Turtles3), modelW5int)
+```
+

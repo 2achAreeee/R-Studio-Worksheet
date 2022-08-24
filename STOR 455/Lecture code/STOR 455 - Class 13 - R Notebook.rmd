@@ -1,0 +1,343 @@
+---
+title: "STOR 455 Class 13 R Notebook"
+output:
+  pdf_document: default
+---
+
+```{r message=FALSE, warning=FALSE}
+library(Stat2Data)
+library(leaps)
+library(bestglm)
+library(readr)
+
+source("https://raw.githubusercontent.com/JA-McLean/STOR455/master/scripts/ShowSubsets.R")
+
+insurance <- read_csv("https://raw.githubusercontent.com/JA-McLean/STOR455/master/data/insurance.csv",
+                      show_col_types = FALSE)
+
+logit = function(B0, B1, x)
+{
+  exp(B0+B1*x)/(1+exp(B0+B1*x))
+}
+```
+
+```{r}
+data("ICU")
+head(ICU)
+```
+
+```{r}
+ICUmod = glm(Survive~AgeGroup, data=ICU, family=binomial)
+
+summary(ICUmod)
+
+B0 = summary(ICUmod)$coef[1]
+B1 = summary(ICUmod)$coef[2]
+
+plot(jitter(Survive,amount=0.1)~AgeGroup,data=ICU)
+curve(logit(B0, B1, x),add=TRUE, col="red")
+```
+
+```{r}
+pi = logit(B0, B1, ICU$AgeGroup)
+head(pi)
+
+odds = pi/(1-pi)
+head(odds)
+
+plot(log(odds)~ICU$AgeGroup)
+abline(B0,B1)
+```
+
+```{r}
+# Two way table of Counts
+ICU.table = table(ICU$Survive, ICU$AgeGroup)
+ICU.table
+
+# Two way table of Column Proportions
+ICU.prop.table = prop.table(ICU.table,2)
+ICU.prop.table
+
+# Two way table of Column logodds
+logodds.ICU.table = log(ICU.prop.table/(1-ICU.prop.table))
+logodds.ICU.table
+```
+
+```{r}
+logodds.ICU.df = t(as.data.frame.matrix(logodds.ICU.table))
+head(logodds.ICU.df)
+```
+
+```{r}
+plot(log(odds)~ICU$AgeGroup, ylim=c(.5, 2.5))
+abline(B0,B1)
+points(logodds.ICU.df[,2], col="dark red",pch="*")
+```
+
+
+```{r}
+ICUmod.2 = glm(Survive~factor(AgeGroup), data=ICU, family=binomial)
+summary(ICUmod.2)
+```
+ 
+```{r}
+anova(ICUmod.2, test="Chisq")
+```
+
+
+```{r}
+ICUmod.3 = glm(Survive~factor(AgeGroup)+Emergency, data=ICU, family=binomial)
+summary(ICUmod.3)
+```
+
+```{r}
+1 - pchisq(summary(ICUmod.2)$deviance - summary(ICUmod.3)$deviance, 1)
+```
+
+```{r}
+anova(ICUmod.2, ICUmod.3, test="Chisq")
+```
+ 
+
+```{r}
+data(MedGPA)
+head(MedGPA)
+```
+
+```{r}
+# NOT correct way for logistic regression
+all = regsubsets(Acceptance~., data=MedGPA[,2:11])
+ShowSubsets(all)
+```
+
+```{r}
+MedGPA.1 = within(MedGPA, {Accept = NULL}) #delete Accept variable
+head(MedGPA.1)
+
+MedGPA.2 = MedGPA.1[,c(2:10,1)] #reorder columns with response last
+head(MedGPA.2)
+```
+
+```{r}
+MedGPA.2.bestglm = bestglm(MedGPA.2, family=binomial)
+MedGPA.2.bestglm$BestModels
+```
+
+
+```{r}
+data("ICU")
+head(ICU)
+```
+
+```{r}
+
+ICU.1 <- within(ICU, {ID = NULL}) #delete ID variable
+ICU.2 = ICU.1[,c(2:8,1)] #reorder columns with response last
+
+head(ICU.2)
+
+# The following is NOT correct since we did not treat AgeGroup as a  categorical variable
+bestglm(ICU.2, family=binomial)
+
+```
+
+```{r}
+ICU.2$AgeGroup2 = ifelse(ICU.2$AgeGroup==2,1,0)
+ICU.2$AgeGroup3 = ifelse(ICU.2$AgeGroup==3,1,0)
+ICU.3 <- within(ICU.2, {AgeGroup = NULL}) #delete AgeGroup variable
+ICU.4 = ICU.3[,c(1:6,8,9,7)] #reorder columns with response last
+
+head(ICU.4)
+
+bestglm(ICU.4, family=binomial)
+
+ICU.4.bestglm = bestglm(ICU.4, family=binomial)
+ICU.4.bestglm$BestModels
+```
+
+```{r}
+# This function produces an empirical logit plot for 
+# a binary response variable and with a single quantitative 
+# predictor variable broken down by a single categorical factor.
+emplogitplot2(Survive~Age+factor(Emergency), data=ICU.4, ngroups=10,putlegend="bottomleft")
+```
+
+```{r message=FALSE, warning=FALSE}
+library(MASS)
+
+insurance <- read_csv("https://raw.githubusercontent.com/JA-McLean/STOR455/master/data/insurance.csv",
+                      show_col_types = FALSE)
+```
+
+```{r}
+head(insurance)
+```
+
+```{r}
+# Fixing some issues in the dataset
+Currency_Convert <- function(Field){
+  Field <- as.numeric(gsub("\\$|,","", Field))
+}
+
+#Change factors to numbers
+insurance$HOME_VAL_num = Currency_Convert(insurance$HOME_VAL)
+insurance$INCOME_num = Currency_Convert(insurance$INCOME)
+insurance$BLUEBOOK_num = Currency_Convert(insurance$BLUEBOOK)
+insurance$OLDCLAIM_num = Currency_Convert(insurance$OLDCLAIM)
+
+#remove unneeded variables
+insurance.1 = within(insurance, 
+                     {INDEX = NULL
+                     TARGET_AMT = NULL
+                     HOME_VAL = NULL
+                     INCOME = NULL 
+                     BLUEBOOK = NULL
+                     OLDCLAIM = NULL})
+
+
+head(insurance.1) 
+```
+
+```{r}
+insurance.2 = insurance.1[,c(2:24,1)] 
+head(insurance.2)
+```
+
+
+```{r}
+#Sad trombone: input matrix must have numeric or factor variables only
+insurance.2 = as.data.frame(insurance.2)
+bestglm(insurance.2, family=binomial)
+```
+
+```{r}
+library(dplyr)
+insurance.2.1 = insurance.2 %>% mutate_if(is.character, factor)
+head(insurance.2.1)
+```
+
+```{r}
+#Sadder trombone: p = 23. must be <= 15 for GLM.
+insurance.2.1 = as.data.frame(insurance.2.1)
+bestglm(insurance.2.1, family=binomial)
+```
+
+```{r}
+full_insurance = glm(TARGET_FLAG~., data=insurance.1, family="binomial")
+summary(full_insurance)
+```
+
+```{r}
+#More sad trombone: need to remove missing values
+stepAIC(full_insurance)
+```
+
+DOING BACKWARD ELIMINATION:
+
+```{r}
+insurance.forstepAIC = na.omit(insurance.1)
+
+full_insurance.2 = glm(TARGET_FLAG~., data=insurance.forstepAIC, family="binomial")
+
+# Given a full model - Backwards selection is the default
+stepAIC(full_insurance.2) 
+```
+
+```{r}
+# trace=FALSE will show only the final model, not each step.
+stepAIC(full_insurance.2, trace=FALSE) 
+```
+
+ 
+```{r}
+final_model_backwards=stepAIC(full_insurance.2, trace=FALSE) 
+
+summary(final_model_backwards)
+
+```
+DOING FORWARD SELECTION:
+
+```{r}
+none = glm(TARGET_FLAG~1, data=insurance.forstepAIC, family="binomial")
+
+final_model_forwards = stepAIC(none, scope=list(upper=full_insurance.2), direction="forward", trace=FALSE)
+
+summary(final_model_forwards)
+```
+
+DOING STEPWISE REGRESSION:
+
+```{r}
+none = glm(TARGET_FLAG~1, data=insurance.forstepAIC, family="binomial")
+
+final_model_both = stepAIC(none, scope=list(upper=full_insurance.2), direction = "both", trace=FALSE)
+
+summary(final_model_both)
+```
+
+
+```{r}
+# Checking significance of model
+# anova does not work for more than one predictor 
+anova(final_model_backwards, test="Chisq")
+```
+
+```{r}
+# This is how we check significance of the model
+
+G = final_model_backwards$null.deviance - final_model_backwards$deviance
+Gdf = final_model_backwards$df.null - final_model_backwards$df.residual
+
+1-pchisq(G, Gdf)
+```
+
+```{r}
+# Let us do some prediction now
+
+some_person = data.frame(     
+          
+  KIDSDRIV = 0,      
+  KIDSDRIV = "No",
+  PARENT1 = "No",
+  MSTATUS = "z_No",       
+  SEX="z_F",           
+  EDUCATION = "Masters",     
+  JOB= "Professional",           
+  TRAVTIME = 15,      
+  CAR_USE = "Private",       
+  TIF = 5,           
+  CAR_TYPE = "z_SUV",       
+  RED_CAR = "no",       
+  CLM_FREQ = 0,       
+  REVOKED = "No",       
+  MVR_PTS = 0,       
+  URBANICITY = "Highly Urban/ Urban",     
+  HOME_VAL_num = 258000,
+  INCOME_num = 82000,  
+  BLUEBOOK_num = 16400,   
+  OLDCLAIM_num = 0
+)
+```
+
+```{r}
+# Predicts logodds
+
+predict(final_model_backwards, some_person)
+```
+
+```{r}
+odds = exp(predict(final_model_backwards, some_person))
+
+odds/(1+odds)
+```
+
+```{r}
+# Predicts probability
+
+predict(final_model_backwards, some_person, type = "response")
+```
+
+```{r}
+predict(final_model_forwards, some_person, type = "response")
+predict(final_model_both, some_person, type = "response")
+```

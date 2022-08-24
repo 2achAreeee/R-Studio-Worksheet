@@ -1,0 +1,181 @@
+---
+title: "Class 11 R Notebook"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r message=FALSE, warning=FALSE}
+library(titanic)
+data("titanic_train")
+head(titanic_train)
+```
+
+```{r}
+table(titanic_train$Survived)
+```
+
+```{r}
+table(titanic_train$Survived, titanic_train$Pclass)
+```
+
+
+```{r}
+Titanic_mod=lm(Survived ~ Fare, data=titanic_train)
+summary(Titanic_mod)
+```
+
+```{r}
+plot(Survived  ~ Fare, data=titanic_train)
+abline(Titanic_mod, col="red")
+```
+
+
+```{r}
+ plot(
+   jitter(Survived, amount=0.1) ~ Fare, 
+   ylim = c(-0.25,1.25), 
+   data=titanic_train
+   )
+
+ abline(Titanic_mod, col="red")
+```
+
+```{r}
+plot(Titanic_mod, c(1, 2, 5))
+```
+
+```{r}
+Titanic_logitmod = glm(Survived ~ Fare, family = binomial, data=titanic_train)
+summary(Titanic_logitmod)
+```
+
+
+```{r}
+plot(Survived ~ Fare, data=titanic_train)
+
+B0 = summary(Titanic_logitmod)$coef[1]
+B1 = summary(Titanic_logitmod)$coef[2]
+
+curve(exp(B0+B1*x)/(1+exp(B0+B1*x)),add=TRUE, col="red")
+```
+
+```{r}
+set.seed(05312022)
+passenger = titanic_train[sample(nrow(titanic_train),1),]
+passenger$Fare
+```
+
+```{r}
+predict(Titanic_logitmod, passenger, type="response")
+```
+
+```{r message=FALSE, warning=FALSE}
+library(Stat2Data)
+
+data("Putts1")
+head(Putts1)
+```
+
+```{r}
+modPutt=glm(Made~Length,family=binomial,data=Putts1)
+summary(modPutt)
+```
+
+```{r}
+B0 = summary(modPutt)$coef[1]
+B1 = summary(modPutt)$coef[2]
+
+plot(jitter(Made,amount=0.1)~Length,data=Putts1)
+curve(exp(B0+B1*x)/(1+exp(B0+B1*x)),add=TRUE, col="red")
+```
+
+
+```{r}
+Putts.table = table(Putts1$Made, Putts1$Length)
+Putts.table
+```
+
+
+```{r}
+p.hat = as.vector(Putts.table[2,]/colSums(Putts.table))
+p.hat
+```
+
+
+```{r}
+logit = function(B0, B1, x)
+  {
+    exp(B0+B1*x)/(1+exp(B0+B1*x))
+  }
+```
+
+
+```{r}
+pi.hat = logit(B0, B1, c(3:7))
+
+pi.hat
+```
+
+
+```{r}
+Putts = data.frame(
+  "Length" = c(3:7), 
+  "p.hat"  = p.hat, 
+  "pi.hat" = pi.hat)
+
+head(Putts)
+```
+
+
+```{r}
+plot(p.hat~Length,ylim=c(0,1), xlim=c(0,12), data=Putts)
+curve(logit(B0, B1, x),add=TRUE, col="red")
+```
+
+```{r}
+plot(jitter(Made,amount=0.1)~Length,data=Putts1)
+
+points(p.hat~Length, data=Putts, col='blue')
+
+curve(logit(B0, B1, x),add=TRUE, col="red")
+```
+
+```{r}
+Putts$p.Odds = Putts$p.hat/(1-Putts$p.hat)
+Putts$pi.Odds = Putts$pi.hat/(1-Putts$pi.hat)
+
+head(Putts)
+```
+
+```{r}
+plot(log(p.Odds)~Length, data=Putts, xlim=c(2,8), ylim=c(-2,3))
+abline(B0, B1, col="red")
+```
+
+```{r}
+SE_B1 = summary(modPutt)$coef[2,2]
+exp(B1 - SE_B1*qnorm(0.975))
+exp(B1 + SE_B1*qnorm(0.975))
+```
+
+
+```{r}
+exp(confint.default(modPutt))
+```
+
+```{r}
+exp(confint(modPutt))
+```
+```{r}
+summary(modPutt)
+
+G = summary(modPutt)$null.deviance - summary(modPutt)$deviance
+
+1 - pchisq(G,1)
+```
+
+
+```{r}
+anova(modPutt, test="Chisq")
+```

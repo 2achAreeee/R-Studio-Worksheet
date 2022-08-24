@@ -1,0 +1,220 @@
+---
+title: "STOR 455 Class 3 R Notebook"
+output:
+  html_document:
+    df_print: paged
+---
+ 
+```{r message=FALSE, warning=FALSE}
+# message=FALSE, warning=FALSE suppress warnings and messages from appearing in knitted files
+
+library(readr)
+library(Stat2Data)
+```
+
+```{r}
+data("SpeciesArea")
+
+plot(Species~Area, data=SpeciesArea)
+SpeciesModel=lm(Species~Area, data=SpeciesArea)
+abline(SpeciesModel)
+
+plot(SpeciesModel$residuals~SpeciesModel$fitted.values)
+abline(0,0)
+```
+
+```{r}
+max(SpeciesModel$residuals)
+which.max(SpeciesModel$residuals)
+
+SpeciesArea[3,]
+
+SpeciesArea[SpeciesArea$Name=="Java",]
+```
+
+```{r}
+plot(log(Species)~log(Area), data=SpeciesArea)
+SpeciesModel2=lm(log(Species)~log(Area), data=SpeciesArea)
+abline(SpeciesModel2)
+
+summary(SpeciesModel2)
+
+plot(SpeciesModel2, 1:2)
+```
+
+```{r}
+B0 = summary(SpeciesModel2)$coefficients[1,1]
+B1 = summary(SpeciesModel2)$coefficients[2,1]
+
+plot(Species~Area, data=SpeciesArea)
+curve(exp(B0)*x^B1, add=TRUE)
+```
+
+
+```{r}
+data("SeaIce")
+head(SeaIce)
+```
+
+```{r}
+plot(Extent~t, data = SeaIce)
+IceModel1=lm(Extent~t, data = SeaIce)
+abline(IceModel1)
+```
+
+```{r}
+plot(IceModel1$residuals~IceModel1$fitted.values)
+abline(0,0)
+
+abline(v=c(5.65,6.52), 
+       col=c("red", "red"), 
+       lty=c(2,2), 
+       lwd=c(1, 1)) #Draws red dashed vertical lines
+
+plot(IceModel1, 1:2)
+```
+
+```{r}
+plot(Extent^3~t, data=SeaIce)
+IceModel2=lm(Extent^3~t, data=SeaIce)
+abline(IceModel2)
+
+plot(IceModel2,1:2)
+```
+
+
+```{r}
+plot(Extent^5~t, data=SeaIce)
+IceModel3=lm(Extent^5~t, data=SeaIce)
+abline(IceModel3)
+
+plot(IceModel3, 1:2)
+```
+
+
+```{r}
+plot(Extent~t, data=SeaIce)
+plot(Extent~t^3, data=SeaIce)
+
+plot(Extent~I(t^3), data=SeaIce)
+```
+
+
+```{r}
+plot(Extent~t, data=SeaIce)
+
+summary(IceModel3)
+
+B0_Ice=summary(IceModel3)$coef[1,1]
+B1_Ice=summary(IceModel3)$coef[2,1]
+
+curve((B0_Ice+B1_Ice*x)^(1/5), add=TRUE)
+```
+
+Extent^5 = B0+B1*t
+Extent = (B0_B1*t)^(1/5)
+
+```{r}
+data("LongJumpOlympics2016")
+head(LongJumpOlympics2016)
+```
+
+```{r}
+plot(Gold~Year, data=LongJumpOlympics2016)
+GoldModel = lm(Gold~Year, data=LongJumpOlympics2016)
+abline(GoldModel)
+
+plot(GoldModel, 1:2)
+summary(GoldModel)
+```
+
+```{r}
+boxplot(GoldModel$residuals)
+
+max(GoldModel$residuals)
+which.max(GoldModel$residuals)
+```
+
+
+```{r}
+rstandard(GoldModel)
+
+max(rstandard(GoldModel))
+
+rstandard(GoldModel)[16]
+```
+
+```{r}
+plot(rstandard(GoldModel)~GoldModel$fitted.values)
+abline(0,0)
+```
+
+```{r}
+plot(rstudent(GoldModel)~GoldModel$fitted.values)
+abline(0,0)
+
+rstudent(GoldModel)[16]
+```
+
+```{r}
+plot(IceModel3)
+
+max(rstandard(IceModel3))
+max(rstudent(IceModel3))
+
+```
+
+
+```{r}
+data(PalmBeach)
+head(PalmBeach)
+
+ElectionModel = lm(Buchanan~Bush, data=PalmBeach)
+
+plot(Buchanan~Bush, data=PalmBeach)
+abline(ElectionModel)
+```
+
+```{r}
+plot(ElectionModel, 1:2)
+
+plot(rstudent(ElectionModel)~ElectionModel$fitted.values)
+abline(0,0)
+
+plot(rstandard(ElectionModel)~ElectionModel$fitted.values)
+abline(0,0)
+
+boxplot(ElectionModel$residuals, horizontal=TRUE)
+
+max(rstandard(ElectionModel))
+which.max(rstandard(ElectionModel))
+PalmBeach[50,]
+
+max(rstudent(ElectionModel))
+which.max(rstudent(ElectionModel))
+```
+
+```{r}
+newdata = subset(PalmBeach, County!="PALM BEACH")
+
+ElectionModel_noPB = lm(Buchanan~Bush, data=newdata)
+
+summary(ElectionModel)
+summary(ElectionModel_noPB)
+```
+
+```{r}
+plot(ElectionModel_noPB, 1:2)
+
+plot(rstudent(ElectionModel_noPB)~ElectionModel_noPB$fitted.values)
+abline(0,0)
+
+plot(rstandard(ElectionModel_noPB)~ElectionModel_noPB$fitted.values)
+abline(0,0)
+
+boxplot(ElectionModel_noPB$residuals, horizontal=TRUE)
+boxplot(ElectionModel$residuals, horizontal=TRUE)
+```
+
+
+

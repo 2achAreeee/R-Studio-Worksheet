@@ -1,0 +1,85 @@
+---
+title: "STOR 455 Class 7 R Notebook"
+output:
+  pdf_document:
+---
+
+```{r warning=FALSE, message=FALSE}
+library(readr)
+library(Stat2Data)
+library(car)
+
+data("Houses")
+
+StateSAT <- read_csv("https://raw.githubusercontent.com/JA-McLean/STOR455/master/data/StateSAT.csv")
+
+source("https://raw.githubusercontent.com/JA-McLean/STOR455/master/scripts/anova455.R")
+
+``` 
+
+```{r}
+head(Houses)
+cor(Houses)
+```
+
+```{r}
+#cor.test(Houses)
+
+cor.test(Houses$Size, Houses$Price)
+cor.test(Houses$Lot, Houses$Price)
+cor.test(Houses$Size,Houses$Lot)
+```
+
+```{r}
+HouseModel=lm(Price~Size+Lot,data=Houses)
+summary(HouseModel)
+```
+
+```{r}
+anova(HouseModel)
+```
+
+```{r}
+anova455(HouseModel)
+```
+
+```{r}
+mod=lm(Size~Lot, data=Houses)
+summary(mod)
+
+summary(mod)$r.squared
+```
+
+```{r}
+VIF = 1/(1-summary(mod)$r.squared)
+VIF
+```
+
+```{r}
+summary(HouseModel)
+
+sqrt(VIF)
+```
+
+```{r}
+vif(HouseModel)
+```
+
+```{r}
+head(StateSAT)
+```
+
+```{r}
+plot(SAT~., StateSAT[,2:8])
+```
+
+```{r}
+SAT_Model = lm(SAT~., data=StateSAT[,2:8])
+plot(SAT_Model)
+summary(SAT_Model)
+```
+
+```{r}
+vif(SAT_Model)
+```
+

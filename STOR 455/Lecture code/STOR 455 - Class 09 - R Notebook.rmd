@@ -1,0 +1,161 @@
+---
+title: "STOR 455 - Class 09 - R Notebook"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r message=FALSE, warning=FALSE}
+library(readr)
+library(leaps)
+library(car)
+
+StateSAT <- read_csv("https://raw.githubusercontent.com/JA-McLean/STOR455/master/data/StateSAT.csv")
+
+source("https://raw.githubusercontent.com/JA-McLean/STOR455/master/scripts/ShowSubsets.R")
+```
+
+```{r}
+modSAT3 = lm(SAT~Takers, data=StateSAT)
+summary(modSAT3)
+plot(modSAT3)
+```
+
+```{r}
+modSAT4 = lm(SAT~I(Takers^2), data=StateSAT)
+summary(modSAT4)
+plot(modSAT4)
+```
+
+```{r}
+StateSAT$TakersSq = StateSAT$Takers^2
+
+modSATquad1 = lm(SAT~Takers + TakersSq, data=StateSAT)
+summary(modSATquad1)
+
+plot(modSATquad1)
+```
+
+```{r}
+modSATquad2 = lm(SAT~ Takers+ I(Takers^2), data=StateSAT)
+summary(modSATquad2)
+```
+
+```{r}
+modSATquad3 = lm(SAT~poly(Takers, degree=2, raw=TRUE), data=StateSAT)
+summary(modSATquad3)
+```
+
+```{r}
+anova(modSATquad2)
+```
+
+```{r}
+anova(modSATquad3)
+```
+
+```{r}
+plot(SAT~Takers, data=StateSAT)
+
+B0_modSATquad2 = summary(modSATquad2)$coef[1,1]
+B1_modSATquad2 = summary(modSATquad2)$coef[2,1]
+B2_modSATquad2 = summary(modSATquad2)$coef[3,1]
+
+curve(B0_modSATquad2 + B1_modSATquad2*x + B2_modSATquad2*x^2, add=TRUE)
+```
+
+```{r}
+modSATcubic = lm(SAT~ Takers+ I(Takers^2) + I(Takers^3), data=StateSAT)
+summary(modSATcubic)
+```
+
+```{r}
+# Need the car package for this
+vif(modSATcubic)
+```
+
+```{r}
+plot(SAT~Takers, data=StateSAT, main="Cubic Model")
+
+B0_modSATcubic = summary(modSATcubic)$coef[1,1]
+B1_modSATcubic = summary(modSATcubic)$coef[2,1]
+B2_modSATcubic = summary(modSATcubic)$coef[3,1]
+B3_modSATcubic = summary(modSATcubic)$coef[4,1]
+
+curve(B0_modSATcubic + B1_modSATcubic*x + B2_modSATcubic*x^2 + B3_modSATcubic*x^3, add=TRUE)
+```
+
+```{r}
+anova(modSATcubic)
+```
+
+```{r}
+modSAT10 = lm(SAT~poly(Takers, degree=10, raw=TRUE), data=StateSAT)
+summary(modSAT10)
+```
+
+```{r}
+modSAT10_coef = summary(modSAT10)$coef[,1]
+modSAT10_coef
+
+library(polynom)
+modSAT10_poly = as.function(polynomial(modSAT10_coef))
+
+plot(SAT~Takers, data=StateSAT, main='10th Degree Polynomial')
+curve(modSAT10_poly, add = TRUE)
+```
+
+
+```{r}
+anova(modSATquad3, modSAT10)
+
+```
+
+```{r}
+modSATquad4 = lm(SAT~ Rank + I(Rank^2), data=StateSAT)
+summary(modSATquad4)
+
+plot(modSATquad4)
+ 
+plot(SAT~Rank, data=StateSAT)
+
+B0_modSATquad4 = summary(modSATquad4)$coef[1,1]
+B1_modSATquad4 = summary(modSATquad4)$coef[2,1]
+B2_modSATquad4 = summary(modSATquad4)$coef[3,1]
+
+curve(B0_modSATquad4 + B1_modSATquad4*x + B2_modSATquad4*x^2, add=TRUE)
+```
+
+```{r}
+plot(SAT~Rank, data=StateSAT)
+mod2 = lm(SAT~I(Rank^2), data=StateSAT)
+
+B0_mod2 = summary(mod2)$coef[1,1]
+B1_mod2 = summary(mod2)$coef[2,1]
+
+curve(B0_mod2 + B1_mod2*x^2, add=TRUE)
+```
+
+```{r}
+modSAT2ndorder=lm(SAT~Takers+Rank+I(Takers^2)+I(Rank^2)+I(Takers*Rank),data=StateSAT)
+summary(modSAT2ndorder)
+
+plot(modSAT2ndorder)
+```
+
+```{r}
+modSAT2ndorder_Reduced=lm(SAT~Takers+Rank+I(Takers^2)+I(Rank^2),data=StateSAT)
+anova(modSAT2ndorder_Reduced, modSAT2ndorder)
+
+modSAT2ndorder_Reduced2=lm(SAT~Takers+Rank, data=StateSAT)
+anova(modSAT2ndorder_Reduced2,modSAT2ndorder)
+
+modSAT2ndorder_Reduced3 = lm(SAT~Takers+I(Takers^2),data=StateSAT)
+anova(modSAT2ndorder_Reduced3, modSAT2ndorder)
+```
+
+
+```{r}
+modSAT2ndorder_polym = lm(SAT~polym(Takers, Rank, degree=2, raw=TRUE),data=StateSAT)
+summary(modSAT2ndorder_polym)
+```

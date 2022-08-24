@@ -1,0 +1,121 @@
+---
+title: "Class 12 R Notebook"
+output:
+  pdf_document: default
+---
+
+```{r message=FALSE, warning=FALSE}
+library(Stat2Data)
+library(readr)
+
+GoldenBalls <- read_csv("https://raw.githubusercontent.com/JA-McLean/STOR455/master/data/GoldenBalls.csv")
+
+logit = function(B0, B1, x)
+  {
+    exp(B0+B1*x)/(1+exp(B0+B1*x))
+  }
+```
+
+
+```{r}
+head(GoldenBalls)
+table(GoldenBalls$Split, GoldenBalls$Over40)
+```
+
+
+```{r}
+GBmod = glm(Split~Over40, data=GoldenBalls, family=binomial)
+summary(GBmod)
+
+B0 = summary(GBmod)$coef[1]
+B1 = summary(GBmod)$coef[2]
+
+plot(jitter(Split,amount=0.1)~Over40,data=GoldenBalls, xlim=c(-.2, 1.2), ylim=c(-.2, 1.2) )
+curve(logit(B0, B1, x),add=TRUE, col="red")
+```
+
+
+```{r}
+GoldenBalls_table=table(GoldenBalls$Split, GoldenBalls$Over40)
+GoldenBalls_p_hat=as.vector(GoldenBalls_table[2,]/colSums(GoldenBalls_table))
+GoldenBalls_logodds_p_hat = log(GoldenBalls_p_hat/(1-GoldenBalls_p_hat))
+
+plot(GoldenBalls_logodds_p_hat~c(0,1))
+abline(B0, B1, col="red")
+```
+
+
+```{r}
+data("MedGPA")
+head(MedGPA)
+```
+
+
+```{r}
+MedGPA.glm = glm(Acceptance~GPA, data=MedGPA, family = binomial)
+
+B0 = summary(MedGPA.glm)$coef[1]
+B1 = summary(MedGPA.glm)$coef[2]
+
+plot(jitter(Acceptance,amount=0.1)~GPA,data=MedGPA)
+curve(logit(B0, B1, x),add=TRUE, col="red")
+```
+
+
+```{r}
+sorted.MedGPA = MedGPA[order(MedGPA$GPA),]
+GPA = sorted.MedGPA$GPA
+Acceptance = sorted.MedGPA$Acceptance
+
+
+
+
+groups = 5
+group.size = 11
+
+GPA.means = 0
+Acceptance.sums = 0
+
+for(i in 1:groups){
+  GPA.means[i] = mean(
+    GPA[((group.size*i)-(group.size-1)):(group.size*i)])
+  }
+
+GPA.means
+```
+
+
+```{r}
+for(i in 1:groups){
+  Acceptance.sums[i] =sum( 
+    Acceptance[((group.size*i)-(group.size-1)):(group.size*i)])
+  }
+
+Acceptance.sums
+
+
+Acceptance.prop.adj = (Acceptance.sums +0.5)/(group.size+1)
+
+logodd.Acceptance.adj = log(Acceptance.prop.adj/(1-Acceptance.prop.adj))
+
+plot(logodd.Acceptance.adj~GPA.means)
+abline(B0,B1)
+```
+
+
+```{r}
+emplogitplot1(Acceptance~GPA, data=MedGPA, ngroups=5)
+```
+
+
+```{r}
+for(j in 5:11){emplogitplot1(Acceptance~GPA, data=MedGPA, ngroups=j, main=j)}
+```
+
+
+```{r}
+data("Putts1")
+emplogitplot1(Made~Length, data=Putts1, ngroups="all")
+
+emplogitplot1(Split~Over40, data=GoldenBalls, ngroups="all")
+```

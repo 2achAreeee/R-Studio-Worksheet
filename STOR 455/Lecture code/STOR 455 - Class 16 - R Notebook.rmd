@@ -1,0 +1,186 @@
+---
+title: "STOR 455 Class 16 R Notebook"
+output: 
+  pdf_document
+---
+
+
+```{r message=FALSE, warning=FALSE}
+library(readr)
+
+Pulse <- read_csv("https://raw.githubusercontent.com/JA-McLean/STOR455/master/data/Pulse.csv")
+```
+
+```{r}
+modp2 = lm(Active ~ Rest + factor(Exercise), data=Pulse)
+
+summary(modp2)
+anova(modp2)
+
+plot(modp2, 1:2)
+```
+
+
+```{r}
+Exercise1 = subset(Pulse, Pulse$Exercise == 1)
+Exercise2 = subset(Pulse, Pulse$Exercise == 2)
+Exercise3 = subset(Pulse, Pulse$Exercise == 3)
+
+lme1 = lm(Active ~ Rest, data = Exercise1)
+lme2 = lm(Active ~ Rest, data = Exercise2)
+lme3 = lm(Active ~ Rest, data = Exercise3)
+
+plot(Active~Rest, data=Pulse)
+abline(lme1)
+abline(lme2, col='red')
+abline(lme3, col='blue')
+```
+
+```{r}
+modp2log = lm(log(Active)~log(Rest) + factor(Exercise), data = Pulse)
+
+anova(modp2log)
+```
+
+```{r}
+plot(modp2log, 1:2)
+```
+
+```{r}
+lme1.log = lm(log(Active) ~ log(Rest), data=Exercise1)
+lme2.log = lm(log(Active) ~ log(Rest), data=Exercise2)
+lme3.log = lm(log(Active) ~ log(Rest), data=Exercise3)
+
+plot(log(Active) ~ log(Rest), data=Pulse)
+abline(lme1.log)
+abline(lme2.log, col='red')
+abline(lme3.log, col='blue')
+```
+
+
+```{r message=FALSE, warning=FALSE}
+library(readr)
+library(car)
+library(lsmeans)
+library(Stat2Data)
+
+Exams4 <- read_csv("https://raw.githubusercontent.com/JA-McLean/STOR455/master/data/Exams4.csv")
+```
+
+
+```{r}
+tapply(Exams4$Grade, Exams4$Student,median)
+medians=rep(tapply(Exams4$Grade,Exams4$Student,median),each=4)
+medians
+```
+
+
+```{r}
+leveneTest(Exams4$Grade,factor(Exams4$Student))
+```
+
+
+```{r}
+data("CancerSurvival")
+head(CancerSurvival)
+```
+
+
+```{r}
+Cancer.mod = aov(Survival~Organ, data=CancerSurvival)
+summary(Cancer.mod)
+```
+
+
+```{r}
+plot(Cancer.mod, 1:2)
+```
+
+
+```{r}
+boxplot(Survival~Organ, data=CancerSurvival)
+tapply(CancerSurvival$Survival,CancerSurvival$Organ, sd)
+
+leveneTest(CancerSurvival$Survival,CancerSurvival$Organ)
+```
+
+
+```{r}
+boxplot(log(Survival)~Organ, data=CancerSurvival)
+tapply(log(CancerSurvival$Survival),CancerSurvival$Organ, sd)
+leveneTest(log(CancerSurvival$Survival),CancerSurvival$Organ)
+```
+
+
+```{r}
+Cancer.mod.log = aov(log(Survival)~Organ, data=CancerSurvival)
+summary(Cancer.mod.log)
+
+```
+
+
+```{r}
+plot(Cancer.mod.log, 1:2)
+```
+
+
+```{r}
+TukeyHSD(Cancer.mod.log)
+```
+
+
+```{r}
+data("FruitFlies")
+head(FruitFlies)
+```
+
+
+```{r}
+boxplot(Longevity~Treatment, data=FruitFlies)
+tapply(FruitFlies$Longevity,FruitFlies$Treatment, mean)
+tapply(FruitFlies$Longevity,FruitFlies$Treatment, sd)
+```
+
+
+```{r}
+leveneTest(FruitFlies$Longevity,FruitFlies$Treatment)
+
+Fly.mod = aov(Longevity~Treatment, data=FruitFlies)
+summary(Fly.mod)
+
+plot(Fly.mod, 1:2) 
+
+TukeyHSD(Fly.mod)
+```
+
+
+```{r}
+summary(Fly.mod)
+Fly.MSE = summary(Fly.mod)[[1]][2,3]
+
+Contrast.SE = sqrt(Fly.MSE*((.5)^2/25+(-.5)^2/25+(.5)^2/25+(-.5)^2/25))
+
+contrast = -0.5*mean(FruitFlies$Longevity[FruitFlies$Treatment=="1 virgin"]) +
+  -0.5*mean(FruitFlies$Longevity[FruitFlies$Treatment=="8 virgin"]) +
+   0.5*mean(FruitFlies$Longevity[FruitFlies$Treatment=="1 pregnant"]) + 
+   0.5*mean(FruitFlies$Longevity[FruitFlies$Treatment=="8 pregnant"])
+
+t.stat = contrast/Contrast.SE
+t.stat
+
+2*(1-pt(t.stat, 120))
+
+```
+
+
+```{r}
+lsmeans(Fly.mod, ~Treatment)
+
+pairs(lsmeans(Fly.mod, ~Treatment))
+TukeyHSD(Fly.mod)
+
+
+contrast(lsmeans(Fly.mod, ~Treatment), list(AvB = c(0.5, -0.5, 0.5, -0.5, 0)))
+```
+
+

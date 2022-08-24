@@ -1,0 +1,173 @@
+---
+title: "STOR 455 Class 2 R Notebook"
+output:
+  pdf_document: default
+---
+
+```{r warning = FALSE, message=FALSE}
+library(readr)
+library(Stat2Data) # install first
+
+lego <- read_csv("https://raw.githubusercontent.com/JA-McLean/STOR455/master/data/lego.csv")
+Planets <- read_csv("https://raw.githubusercontent.com/JA-McLean/STOR455/master/data//Planets.csv")
+
+head(lego)
+```
+
+```{r}
+plot(Amazon_Price~Pieces, data=lego)
+```
+
+```{r}
+lego_under_2k_pieces = subset(lego, Pieces < 2000)
+```
+
+```{r}
+plot(Amazon_Price~Pieces, data=lego_under_2k_pieces)
+```
+
+```{r}
+lm(Amazon_Price~Pieces, data=lego_under_2k_pieces)
+```
+
+```{r}
+mod1=lm(Amazon_Price~Pieces, data=lego_under_2k_pieces)
+plot(Amazon_Price~Pieces, data=lego_under_2k_pieces)
+abline(mod1)
+```
+
+```{r}
+summary(mod1)
+
+head(mod1$residuals)
+head(mod1$fitted.values)
+
+plot(mod1$residuals~mod1$fitted.values)
+abline(0,0)
+```
+
+```{r}
+hist(mod1$residuals, breaks=20)
+```
+
+```{r}
+qqnorm(mod1$residuals)
+qqline(mod1$residuals)
+```
+
+```{r}
+#Sets randomization
+set.seed(455001)
+
+#Sample of 99 values from a Normal distribution; mean=0; sd=1; sorted ascending
+x = sort(rnorm(99,0,1))
+hist(x)
+
+#list of integers 1 through 99.
+y = c(1:99)
+
+#z-scores of dataset of 99 values if perfectly normally distributed
+normy = qnorm(y/100)
+
+plot(x~normy)
+abline(0,1)
+```
+
+```{r}
+x <- rnorm(804, 0, 31.35)
+qqnorm(x)
+qqline(x)
+```
+
+```{r}
+plot(mod1)
+```
+
+```{r}
+lego_under_1100_pieces = subset(lego, Pieces < 1100)
+
+plot(Amazon_Price~Pieces, data=lego_under_1100_pieces)
+
+mod2=lm(Amazon_Price~Pieces, data=lego_under_1100_pieces)
+abline(mod2)
+
+plot(mod2)
+```
+
+```{r}
+head(Planets, 9)
+
+plot(Year~Distance, data=Planets)
+mod2=lm(Year~Distance, data=Planets)
+abline(mod2)
+```
+
+```{r}
+plot(mod2$residuals~mod2$fitted.values)
+abline(0,0)
+
+qqnorm(mod2$residuals)
+qqline(mod2$residuals)
+```
+
+```{r}
+plot(mod2, 1:2)
+```
+
+```{r}
+par(mfrow=c(2,2))
+
+plot(Year~Distance, data=Planets)
+plot(log(Year)~Distance, data=Planets)
+plot(Year~log(Distance), data=Planets)
+plot(log(Year)~log(Distance), data=Planets)
+```
+
+
+```{r}
+mod3 = lm(log(Year)~log(Distance), data=Planets)
+
+plot(log(Year)~log(Distance), data=Planets)
+abline(mod3)
+
+plot(mod3, 1:2)
+```
+
+```{r}
+summary(mod3)
+```
+
+log(Year) =  -0.0034399 + 1.5020611*log(Distance)
+
+Year = e ^(-0.0034399 + 1.5020611(log(Distance))
+
+Year = e ^(-0.0034399) e ^((1.5020611)(log(Distance))
+
+Year = e ^(-0.0034399) e ^(log(Distance ^1.5020611))
+
+Year = e ^(-0.0034399) (Distance^1.5020611)
+
+
+```{r}
+exp(-0.0034339)
+```
+
+Year = 0.996572(Distance^1.5020611)
+
+```{r}
+plot(Year~Distance, data=Planets)
+curve(0.996572*(x^1.5020611), add=TRUE)
+```
+
+```{r}
+B0 = summary(mod3)$coefficients[1,1]
+B1 = summary(mod3)$coefficients[2,1]
+
+plot(Year~Distance, data=Planets)
+curve(exp(B0)*x^B1, add=TRUE)
+```
+
+```{r}
+data("SpeciesArea")
+head(SpeciesArea)
+```

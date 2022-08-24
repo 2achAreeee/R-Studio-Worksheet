@@ -1,0 +1,95 @@
+---
+title: "STOR 455 - Class 7 - R Notebook"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r message=FALSE, warning=FALSE}
+library(readr)
+library(car)
+library(corrplot) #Install first if needed
+library(leaps) #Install first if needed
+
+StateSAT <- read_csv("https://raw.githubusercontent.com/JA-McLean/STOR455/master/data/StateSAT.csv")
+
+source("https://raw.githubusercontent.com/JA-McLean/STOR455/master/scripts/ShowSubsets.R")
+```
+
+```{r}
+head(StateSAT)
+
+cor(StateSAT[c(2:8)])
+
+corrplot(cor(StateSAT[c(2:8)]), type="upper")
+```
+
+```{r}
+plot(SAT~., data=StateSAT[c(2:8)])
+```
+
+```{r}
+modSAT1 = lm(SAT~., data=StateSAT[c(2:8)])
+summary(modSAT1)
+plot(modSAT1)
+vif(modSAT1)
+```
+
+```{r}
+all = regsubsets(SAT~., data = StateSAT[c(2:8)], nbest = 2)
+summary(all)
+```
+
+```{r}
+ShowSubsets(all)
+```
+
+```{r}
+modSAT3 = lm(SAT~Years+Public+Expend+Rank, data=StateSAT)
+summary(modSAT3)
+```
+
+```{r}
+plot(modSAT3)
+vif(modSAT3)
+```
+
+```{r}
+summary(modSAT1)
+
+modSAT2.1 = lm(SAT~Takers+Years+Public+Expend+Rank, data=StateSAT)
+summary(modSAT2.1)
+
+modSAT2.2 = lm(SAT~Years+Public+Expend+Rank, data=StateSAT)
+summary(modSAT2.2)
+
+modSAT2.3 = lm(SAT~Years+Expend+Rank, data=StateSAT)
+summary(modSAT2.3)
+```
+
+```{r}
+Full = lm(SAT~Takers+Income+Years+Public+Expend+Rank, data=StateSAT)
+MSE = (summary(Full)$sigma)^2
+
+step(Full, scale=MSE)
+```
+
+```{r}
+none = lm(SAT~1, data=StateSAT)
+
+step(none, scope=list(upper=Full), scale=MSE, direction="forward")
+```
+
+```{r}
+step(none, scope=list(upper=Full), scale=MSE, direction="forward", trace=FALSE)
+```
+
+```{r}
+step(none, scope=list(upper=Full), scale=MSE)
+```
+
+```{r}
+data(mtcars)
+head(mtcars)
+```
+
