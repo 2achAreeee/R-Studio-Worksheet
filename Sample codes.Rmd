@@ -1,0 +1,159 @@
+---
+title: "R Sample Codes for DDL"
+output:
+  html_document:
+    df_print: paged
+---
+#Use of tidyverse package to analysis the diamonds dataset
+```{r}
+library(tidyverse)
+```
+
+```{r}
+summary(select(diamonds, x, y, z))
+```
+
+```{r}
+ggplot(diamonds) +
+  geom_histogram(mapping = aes(x = x), binwidth = 0.01)
+```
+```{r}
+ggplot(diamonds) +
+  geom_histogram(mapping = aes(x = y), binwidth = 0.01)
+```
+```{r}
+ggplot(diamonds) +
+  geom_histogram(mapping = aes(x = z), binwidth = 0.01)
+```
+There are also some outliers in the values of y and z. I want to check them in table.
+```{r}
+diamonds %>%
+  arrange(desc(y)) %>%
+  head(5)
+```
+There a two diamonds with extremly larger value of y. I want to check the y value without the outliers.
+```{r}
+filter(diamonds, z > 0, y < 11) %>%
+  ggplot() +
+  geom_histogram(mapping = aes(x = y), binwidth = 0.01)
+```
+
+```{r}
+diamonds %>%
+  arrange(desc(z)) %>%
+  head(5)
+```
+
+There is a one diamond with extremely large value of z. I want to check the z value without the outlier.
+
+```{r}
+filter(diamonds, z > 0, z < 10) %>%
+  ggplot() +
+  geom_histogram(mapping = aes(x = z), binwidth = 0.01)
+```
+According to the documentation for diamonds, x is length, y is width, and z is depth. If documentation were unavailable, I would compare the values of the variables to match them to the length, width, and depth. I would expect length and width would be two independent values that they are not defined by size relationship. But I would expect that the depth would always be the smallest value.
+```{r}
+summarise(diamonds, mean(x > y), mean(x > z), mean(y > z))
+```
+The data shown above prove what I expect.
+
+```{r}
+ggplot(data = diamonds, mapping = aes(x = carat, y = price)) +
+  geom_boxplot(mapping = aes(group = cut_width(carat, 0.1)), orientation = "x")
+```
+There is a positive relationship between carat and price.
+```{r}
+diamonds %>%
+  mutate(color = fct_rev(color)) %>%
+  ggplot(aes(x = color, y = price)) +
+  geom_boxplot()
+```
+
+There is a weak negative relationship between color and price. Since there are so many outliers, this conclusion is not convincible.
+```{r}
+ggplot(data = diamonds) +
+  geom_boxplot(mapping = aes(x = clarity, y = price))
+```
+
+There is also a weak negative relationship between clarity and price. Since there are so many outliers, this conclusion is not convincible.
+
+For both clarity and color, there is a much larger amount of variation within each category than between categories. Thus, Carat is clearly the single best predictor of diamond prices.
+```{r}
+ggplot(diamonds, aes(x = carat, y = price, color = cut)) +
+  geom_point()
+```
+
+From the plot we can find that the diamonds has lowest cut but with largest carat can have the similar or same price as those diamonds has better cut but lower carat. We can assume that a larger diamond can be profitably sold with a lower quality cut, while a smaller diamond requires a better cut.
+
+```{r}
+library(lvplot)
+ggplot(diamonds, aes(x = cut, y = price)) +
+  geom_lv()
+```
+Letter-value plots is similar to box-plots, they both correspond to quantiles. However, letter-value plots incorporate far more quantiles than box-plots. They are useful for larger datasets because larger datasets can give precise estimates of quantiles beyond the quartiles, and as expectation, larger datasets should have more outliers.
+
+```{r}
+#
+diamonds %>%
+  count(color, cut) %>%
+  group_by(color) %>%
+  mutate(prop = n / sum(n)) %>%
+  ggplot(mapping = aes(x = color, y = cut)) +
+  geom_tile(mapping = aes(fill = prop))
+```
+
+To clearly show the distribution of cut within color, I calculate a new variable prop which is the proportion of each cut within a color. The proportion can help us show the distribution much more than using just count.
+
+#Web Scraping
+```{r}
+library(rvest)
+ParisA_webpage = read_html("https://www.un.org/en/climatechange/paris-agreement")
+```
+
+What is Paris Agreement?
+```{r}
+Def = html_nodes(ParisA_webpage, 'p:nth-child(8) , p:nth-child(7) , ul+ p')
+
+Def_text = html_text(Def)
+print(Def_text)
+```
+
+#Construct dataframe using online information
+```{r}
+CO2Emission_webpage = read_html("https://www.worldometers.info/co2-emissions/co2-emissions-by-country/")
+```
+
+```{r}
+CO2Emission_webpage
+str(CO2Emission_webpage)
+```
+
+```{r}
+body_nodes <- CO2Emission_webpage %>%
+              html_node("body") %>%
+              html_children()
+
+body_nodes
+```
+```{r}
+Country <- CO2Emission_webpage %>%
+                html_nodes('td:nth-child(2)') %>%
+                html_text()
+
+CO2Emission_total<- CO2Emission_webpage %>%
+                html_nodes('td:nth-child(3)') %>%
+                html_text()
+CO2Emission_per_capita <- CO2Emission_webpage %>%
+                html_nodes('td:nth-child(6)') %>%
+                html_text()
+CO2Emission_share_of_world <- CO2Emission_webpage %>%
+                html_nodes('td:nth-child(7)') %>%
+                html_text()
+
+CO2Emission_2016 = data.frame(Country, CO2Emission_total, CO2Emission_per_capita, CO2Emission_share_of_world, stringsAsFactors = FALSE)
+
+head(CO2Emission_2016)
+```
+
+
+
