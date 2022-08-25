@@ -1,0 +1,207 @@
+---
+title: "SAMPLE Project"
+output: html_document
+date: '2022-08-24'
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(readr)
+library(tidyverse)
+library(ggplot2)
+library(ggthemes)
+library(rvest)
+```
+
+
+```{r}
+WorldEmission = read_csv("historical_emissions.csv")
+```
+```{r}
+WorldEmission
+```
+```{r}
+unique(is.na(WorldEmission))
+```
+
+```{r}
+summary(WorldEmission)
+```
+```{r}
+categories_DS <- unique(WorldEmission$`Data source`) 
+numberOfCategories_DS <- length(categories_DS)
+numberOfCategories_DS
+```
+```{r}
+categories_Sector <- unique(WorldEmission$Sector) 
+numberOfCategories_Sector <- length(categories_Sector)
+numberOfCategories_Sector
+```
+```{r}
+categories_Gas <- unique(WorldEmission$Gas) 
+numberOfCategories_Gas <- length(categories_Gas)
+numberOfCategories_Gas
+```
+
+```{r}
+categories_Unit <- unique(WorldEmission$Unit) 
+numberOfCategories_Unit <- length(categories_Unit)
+numberOfCategories_Unit
+```
+
+
+```{r}
+WorldEmissionA = WorldEmission[!(WorldEmission$Country=="World" | 
+                                 WorldEmission$Country=="European Union (27)"),] %>%
+                 select(,c(1, 6:34))
+WorldEmissionA = WorldEmissionA[,c(1,ncol(WorldEmissionA):2)]
+WorldEmissionA
+```
+```{r}
+WorldEmissionA$`1990`= as.numeric(WorldEmissionA$`1990`)
+WorldEmissionA_1990 <- arrange(WorldEmissionA,desc(`1990`))
+head(WorldEmissionA_1990)
+```
+```{r}
+WorldEmissionA_2018 <- arrange(WorldEmissionA,desc(`2018`))
+head(WorldEmissionA_2018)
+```
+```{r}
+WorldEmissionA_2018_B10 <- WorldEmissionA_2018 %>%
+                         arrange(desc(`2018`)) %>%
+                         head(10)
+
+ggplot(data = WorldEmissionA_2018_B10, aes(x = reorder(Country, -`2018`), y = `2018`)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  theme_minimal()
+```
+
+
+```{r}
+world_map = map_data("world") %>%
+  filter(! long >180)
+
+Countries = world_map %>%
+  distinct(region) %>%
+  rowid_to_column()
+
+WorldEmission_2018Only <- select(WorldEmissionA,Country,`2018`)
+Countries = Countries %>%
+            left_join(WorldEmission_2018Only,by = c("region" = "Country"))
+  
+Countries %>%
+  ggplot(aes(fill = `2018`, map_id = region)) +
+  geom_map(map = world_map) +
+  expand_limits(x = world_map$long, y = world_map$lat) +
+  coord_map("moll") +
+  theme_map()
+```
+
+```{r}
+WorldEmission_IP = WorldEmissionA %>%
+                      transmute(Country = Country,
+                                IncreaseProportion = (`2018` - `1990`)/`1990`)
+arrange(WorldEmission_IP,desc(IncreaseProportion))
+```
+```{r}
+CountryP_webpage = read_html("https://en.wikipedia.org/wiki/List_of_countries_by_population_(United_Nations)")
+```
+
+```{r}
+Country <- CountryP_webpage%>%
+                html_nodes('td:nth-child(1)') %>%
+                html_text()
+Country <- Country[-length(Country)]
+Population_2018<- CountryP_webpage %>%
+                html_nodes('td:nth-child(4)') %>%
+                html_text()
+```
+
+```{r}
+Countrypopulation_2018 = data.frame(Country, Population_2018)
+head(Countrypopulation_2018)
+```
+
+
+```{r}
+Countrypopulation_2018[1,1] = 'China'
+Countrypopulation_2018[22,1] = 'France'
+Countrypopulation_2018[25,1] = 'Tanzania'
+Countrypopulation_2018[30,1] = 'Spain'
+Countrypopulation_2018[33,1] = 'Ukraine'
+Countrypopulation_2018[55,1] = 'Australia'
+Countrypopulation_2018[56,1] = 'Taiwan'
+Countrypopulation_2018[68,1] = 'Netherlands'
+Countrypopulation_2018[73,1] = 'Somalia'
+Countrypopulation_2018[88,1] = 'Portugal'
+Countrypopulation_2018[90,1] = 'Azerbaijan'
+Countrypopulation_2018[99,1] = 'Serbia'
+Countrypopulation_2018[104,1] = 'Hong Kong (China)'
+Countrypopulation_2018[116,1] = 'Finland'
+Countrypopulation_2018[119,1] = 'Norway'
+Countrypopulation_2018[121,1] = 'Palestine'
+Countrypopulation_2018[131,1] = 'Moldova'
+Countrypopulation_2018[132,1] = 'Georgia'
+Countrypopulation_2018[158,1] = 'Cyprus'
+Countrypopulation_2018[167,1] = 'Macao (China)'
+Countrypopulation_2018[170,1] = 'Western Sahara'
+Countrypopulation_2018[174,1] = 'Guadeloupe (France)'
+Countrypopulation_2018[190,1] = 'Channel Islands (United Kingdom)'
+Countrypopulation_2018[220,1] = 'Caribbean Netherlands (Netherlands)'
+Countrypopulation_2018[227,1] = 'Saint Helena (United Kingdom)'
+Countrypopulation_2018[233,1] = 'Vatican City'
+```
+
+```{r}
+for (x in 1:nrow(Countrypopulation_2018)) {
+    Countrypopulation_2018[x,1] <- gsub('[^[:alnum:] ]', '', Countrypopulation_2018[x,1])
+}
+head(Countrypopulation_2018)
+```
+
+```{r}
+WorldEmission2018_Population = WorldEmissionA_1990 %>%
+                              left_join(Countrypopulation_2018, by = NULL) %>%
+                              select(Country, `2018`,Population_2018)
+
+head(WorldEmission2018_Population)
+```
+
+```{r}
+for (x in 1:nrow(WorldEmission2018_Population)) {
+    WorldEmission2018_Population[x,3] = gsub('[^[:alnum:] ]', '',WorldEmission2018_Population[x,3])
+}
+WorldEmission2018_Population$Population_2018 = as.integer(WorldEmission2018_Population$Population_2018)
+WorldEmission2018_Population
+WorldEmission2018_Population = WorldEmission2018_Population %>%
+                                mutate(EmissionPerCapita = `2018`/Population_2018)
+head(WorldEmission2018_Population)
+```
+
+```{r}
+EmissionPerCapita_B10 <- WorldEmission2018_Population %>%
+                         arrange(desc(EmissionPerCapita)) %>%
+                         head(10)
+
+ggplot(data = EmissionPerCapita_B10, aes(x = reorder(Country, -EmissionPerCapita), y = EmissionPerCapita)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  theme_minimal()
+```
+
+```{r}
+Countries2 = world_map %>%
+  distinct(region) %>%
+  rowid_to_column()
+
+WorldEmission2018_Population <- select(WorldEmission2018_Population,Country,EmissionPerCapita)
+Countries2 = Countries2 %>%
+            left_join(WorldEmission2018_Population, by = c("region" = "Country"))
+  
+Countries2 %>%
+  ggplot(aes(fill = EmissionPerCapita, map_id = region)) +
+  geom_map(map = world_map) +
+  expand_limits(x = world_map$long, y = world_map$lat) +
+  coord_map("moll") +
+  theme_map()
+```
+
